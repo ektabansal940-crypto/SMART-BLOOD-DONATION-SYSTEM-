@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Partners — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .eru-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--slate-100);
+      overflow: hidden;
+      margin-bottom: 18px;
+      transition: box-shadow var(--transition);
+    }
+    .eru-card:hover { box-shadow: var(--shadow-md); }
+
+    .eru-header {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--slate-100);
+    }
+    .eru-header.pending   { background: var(--warning-pale); }
+    .eru-header.in_transit{ background: var(--teal-pale); }
+    .eru-header.completed { background: var(--success-pale); }
+
+    .eru-code {
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--slate-700);
+    }
+
+    .eru-body { padding: 16px 18px; }
+
+    .eru-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 13.5px;
+    }
+    .eru-row:last-child { border-bottom: none; }
+    .eru-row .er-icon  { color: var(--crimson); width: 18px; flex-shrink: 0; margin-top: 2px; }
+    .eru-row .er-label { color: var(--muted); min-width: 90px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .eru-row .er-value { font-weight: 600; color: var(--slate-800); }
+
+    .eru-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .eru-actions .btn { flex: 1; justify-content: center; min-width: 120px; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-pill.pending    { background: var(--warning-pale); color: var(--warning); }
+    .status-pill.in_transit { background: var(--teal-pale);    color: var(--teal-dark); }
+    .status-pill.completed  { background: var(--success-pale); color: var(--success); }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-tab {
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--slate-200);
+      background: white;
+      color: var(--slate-600);
+      transition: all 0.2s;
+    }
+    .filter-tab:hover  { border-color: var(--crimson); color: var(--crimson); }
+    .filter-tab.active { background: var(--crimson); color: white; border-color: var(--crimson); }
+
+    .eru-hero {
+      background: linear-gradient(135deg, var(--slate-900) 0%, #0a1a18 100%);
+      border-radius: var(--radius-lg);
+      padding: 24px 22px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .eru-hero h2 { color: white; font-size: 20px; font-weight: 800; margin-bottom: 3px; }
+    .eru-hero p  { color: rgba(255,255,255,0.65); font-size: 13px; }
+
+    .eru-stats {
+      display: flex;
+      gap: 14px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+    .eru-stat {
+      background: rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      text-align: center;
+      min-width: 70px;
+    }
+    .eru-stat .es-val  { font-size: 22px; font-weight: 800; color: white; line-height: 1; }
+    .eru-stat .es-label{ font-size: 10px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+  </style>
+</head>
+<body class="app-body">
+
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 ERU — Emergency Response Unit</span>
+  <div class="nav-user"><i class="fa fa-motorcycle"></i> Rider</div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/rider" class="active"><i class="fa fa-motorcycle"></i> Delivery Partners</a>
+</nav>
+
+<div class="main">
+
+  <!-- Hero -->
+  <div class="eru-hero">
+    <div style="grid-column:1/-1;margin-bottom:8px">
+      <a href="/dashboard" style="display:inline-flex;align-items:center;gap:6px;
+         font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.15);
+         border:1.5px solid rgba(255,255,255,0.4);border-radius:var(--radius);
+         padding:6px 14px;text-decoration:none;
+         transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+        <i class="fa fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+    <div style="font-size:40px">🏍️</div>
+    <div>
+      <h2>Emergency Response Unit</h2>
+      <p>View and manage active blood delivery requests. Start and complete deliveries in real-time.</p>
+    </div>
+    <div class="eru-stats">
+      <div class="eru-stat">
+        <div class="es-val" id="stat-pending">—</div>
+        <div class="es-label">Pending</div>
+      </div>
+      <div class="eru-stat">
+        <div class="es-val" id="stat-transit">—</div>
+        <div class="es-label">In Transit</div>
+      </div>
+      <div class="eru-stat">
+        <div class="es-val" id="stat-done">—</div>
+        <div class="es-label">Completed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Map Panel -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-header">
+      <h3><i class="fa fa-map-location-dot" style="color:#2563eb"></i> Live Delivery Map</h3>
+      <button class="btn btn-sm btn-outline" onclick="refreshRiderMap()">
+        <i class="fa fa-sync"></i> Refresh
+      </button>
+    </div>
+    <div id="rider-live-map" style="height:340px;border-radius:var(--radius);overflow:hidden;margin-bottom:6px"></div>
+    <p style="font-size:11.5px;color:var(--muted);padding:0 4px">
+      <i class="fa fa-circle" style="color:#e11d48"></i> Blood bank &nbsp;
+      <i class="fa fa-circle" style="color:#16a34a"></i> Destination &nbsp;
+      <i class="fa fa-motorcycle" style="color:#2563eb"></i> Rider in transit &nbsp;
+      <span style="color:var(--slate-400)">── Dashed = pending / completed</span>
+    </p>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">    <button class="filter-tab active" onclick="filterERU('', this)">All</button>
+    <button class="filter-tab" onclick="filterERU('pending', this)">
+      <i class="fa fa-clock"></i> Pending
+    </button>
+    <button class="filter-tab" onclick="filterERU('in_transit', this)">
+      <i class="fa fa-motorcycle"></i> In Transit
+    </button>
+    <button class="filter-tab" onclick="filterERU('completed', this)">
+      <i class="fa fa-check-circle"></i> Completed
+    </button>
+    <button class="filter-tab" style="margin-left:auto" onclick="loadERURequests(currentFilter)">
+      <i class="fa fa-sync"></i> Refresh
+    </button>
+  </div>
+
+  <!-- ERU Cards -->
+  <div id="eru-container">
+    <div class="loading-state"><div class="spinner"></div></div>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  let currentFilter = "";
+
+  function filterERU(status, btn) {
+    currentFilter = status;
+    document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    loadERURequests(status);
+  }
+
+  async function loadERURequests(status) {
+    const container = document.getElementById("eru-container");
+    container.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
+    try {
+      const url  = status ? `/api/eru/list?status=${status}` : "/api/eru/list";
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      // Update stats
+      const all = await fetch("/api/eru/list").then(r => r.json());
+      document.getElementById("stat-pending").textContent  = all.filter(r => r.status === "pending").length;
+      document.getElementById("stat-transit").textContent  = all.filter(r => r.status === "in_transit").length;
+      document.getElementById("stat-done").textContent     = all.filter(r => r.status === "completed").length;
+
+      if (!data.length) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:48px;color:var(--muted)">
+            <i class="fa fa-check-circle" style="font-size:48px;opacity:0.2;display:block;margin-bottom:12px"></i>
+            No ${status || ""} delivery requests found.
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = data.map(r => renderERUCard(r)).join("");
+      // Resume 60s countdowns for any in_transit requests
+      resumeActiveCountdowns(data);
+      // Sync map
+      refreshRiderMap();
+    } catch (err) {
+      container.innerHTML = `<p style="color:var(--crimson);text-align:center;padding:20px">Failed to load requests.</p>`;
+    }
+  }
+
+  function renderERUCard(r) {
+    const statusLabel = r.status === "in_transit" ? "In Transit" :
+                        r.status === "completed"   ? "Completed"  : "Pending";
+
+    const distBadge = r.distance_km > 0
+      ? `<span style="font-size:11px;background:var(--slate-100);
+                      border-radius:12px;padding:3px 10px;color:var(--slate-600);
+                      font-weight:600;margin-left:6px">
+           📍 ${r.distance_km} km
+         </span>` : "";
+
+    const etaBadge = r.eta_seconds > 0 && r.status !== "completed"
+      ? `<span style="font-size:11px;background:var(--teal-pale);
+                      border-radius:12px;padding:3px 10px;color:var(--teal-dark);
+                      font-weight:600;margin-left:4px">
+           ⏱ ~${r.eta_minutes || "?"} min · ${r.distance_km} km
+         </span>` : "";
+
+    const feeBadge = r.delivery_fee > 0
+      ? `<span style="font-size:11px;background:var(--success-pale);
+                      border-radius:12px;padding:3px 10px;color:var(--success);
+                      font-weight:600;margin-left:4px">
+           💰 ₹${Number(r.delivery_fee).toLocaleString("en-IN")}
+         </span>` : "";
+
+    // Actions section
+    const actions = r.status === "pending" ? `
+      <button class="btn btn-teal" onclick="eruStart(${r.id}, '${r.eru_code}', ${r.eta_seconds || 12}, this)">
+        <i class="fa fa-motorcycle"></i> Start Delivery
+      </button>` :
+    r.status === "in_transit" ? `
+      <div id="countdown-wrap-${r.id}" style="width:100%">
+        <!-- Status breadcrumb -->
+        <div id="status-bar-${r.id}"
+             style="display:flex;align-items:center;gap:6px;margin-bottom:10px;
+                    font-size:11.5px;font-weight:700;flex-wrap:wrap">
+          <span id="step-pickup-${r.id}" style="color:var(--crimson)">🏥 Picked Up</span>
+          <span style="color:var(--slate-300)">──</span>
+          <span id="step-transit-${r.id}" style="color:var(--slate-300)">🚑 In Transit</span>
+          <span style="color:var(--slate-300)">──</span>
+          <span id="step-delivered-${r.id}" style="color:var(--slate-300)">✅ Delivered</span>
+        </div>
+        <!-- Progress bar -->
+        <div style="background:var(--slate-200);border-radius:8px;height:10px;
+                    overflow:hidden;margin-bottom:8px;position:relative">
+          <div id="rider-fill-${r.id}"
+               style="height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--teal-light));
+                      border-radius:8px;transition:width 0.8s ease"></div>
+        </div>
+        <div style="background:var(--teal-pale);border-radius:var(--radius);
+                    padding:10px 14px;text-align:center;font-size:13px;
+                    color:var(--teal-dark);font-weight:700">
+          <i class="fa fa-motorcycle"></i>
+          <span id="rider-status-${r.id}">Delivering…</span>
+          &nbsp;·&nbsp;
+          Estimated Arrival: <strong>${r.eta_minutes || "?"} min</strong>
+          <span style="font-size:11px;font-weight:400;opacity:0.75">
+            based on ${r.distance_km} km
+          </span>
+          <br>
+          <span style="font-size:11px;font-weight:400;opacity:0.65">
+            Simulation countdown:
+            <span id="countdown-${r.id}" style="font-weight:800">
+              ${r.eta_remaining || r.eta_seconds || 12}
+            </span>s
+          </span>
+        </div>
+      </div>` :
+    r.receipt_no ? `
+      <a href="/payment?receipt=${r.receipt_no}"
+         class="btn btn-success" style="text-decoration:none">
+        <i class="fa fa-credit-card"></i> View Payment
+      </a>` : `<span style="color:var(--success);font-weight:600">✓ Delivered</span>`;
+
+    return `
+      <div class="eru-card" id="eru-card-${r.id}">
+        <div class="eru-header ${r.status}">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="eru-code">${r.eru_code}</span>
+            <span class="blood-badge">${r.blood_group}</span>
+            ${distBadge}${etaBadge}${feeBadge}
+          </div>
+          <span class="status-pill ${r.status}">${statusLabel}</span>
+        </div>
+        <div class="eru-body">
+          <div class="eru-row">
+            <i class="fa fa-user eru-icon er-icon"></i>
+            <span class="er-label">Patient</span>
+            <span class="er-value">${r.patient_name || "—"}</span>
+          </div>
+          <div class="eru-row">
+            <i class="fa fa-tint er-icon"></i>
+            <span class="er-label">Blood / Units</span>
+            <span class="er-value">${r.blood_group} — ${r.units} unit(s)</span>
+          </div>
+          <div class="eru-row">
+            <i class="fa fa-map-marker-alt er-icon"></i>
+            <span class="er-label">Location</span>
+            <span class="er-value">${r.location}
+              ${r.distance_km > 0 ? `<span style="font-size:11px;color:var(--muted);margin-left:6px">(${r.distance_km} km from bank)</span>` : ""}
+            </span>
+          </div>
+          ${r.address ? `
+          <div class="eru-row">
+            <i class="fa fa-hospital er-icon"></i>
+            <span class="er-label">Address</span>
+            <span class="er-value">${r.address}</span>
+          </div>` : ""}
+          ${r.donor_name ? `
+          <div class="eru-row">
+            <i class="fa fa-heart er-icon"></i>
+            <span class="er-label">Donor</span>
+            <span class="er-value">${r.donor_name}</span>
+          </div>` : ""}
+          ${r.receipt_no ? `
+          <div class="eru-row">
+            <i class="fa fa-receipt er-icon"></i>
+            <span class="er-label">Receipt</span>
+            <span class="er-value" style="font-family:monospace">${r.receipt_no}</span>
+          </div>` : ""}
+          <div class="eru-row">
+            <i class="fa fa-clock er-icon"></i>
+            <span class="er-label">Created</span>
+            <span class="er-value">${r.created_at}</span>
+          </div>
+          <div class="eru-actions">${actions}</div>
+        </div>
+      </div>`;
+  }
+
+  // Track active countdown timers
+  const activeTimers = {};
+
+  async function eruStart(eruId, eruCode, etaSeconds, btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Starting…`;
+    try {
+      const res  = await fetch("/api/eru/start", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eru_id: eruId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`${data.eru_code} — In Transit. Auto-delivering in ${etaSeconds}s`, "success");
+        await loadERURequests(currentFilter);
+        startDeliveryCountdown(eruId, etaSeconds);
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa fa-motorcycle"></i> Start Delivery`;
+        showToast(data.message, "error");
+      }
+    } catch {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-motorcycle"></i> Start Delivery`;
+      showToast("Failed. Try again.", "error");
+    }
+  }
+
+  function startDeliveryCountdown(eruId, totalSecs, startFrom) {
+    if (activeTimers[eruId]) return;
+    let secs = startFrom !== undefined ? startFrom : totalSecs;
+    const total = totalSecs || secs;
+
+    // City waypoints for live location display
+    const waypoints = [
+      "Leaving blood bank…",
+      "Passing main junction…",
+      "Crossing railway station area…",
+      "Entering residential zone…",
+      "Approaching delivery address…",
+      "Arriving at destination…"
+    ];
+
+    activeTimers[eruId] = setInterval(async () => {
+      secs--;
+      const pct   = Math.max(0, Math.min(100, ((total - secs) / total) * 100));
+      const wpIdx = Math.min(Math.floor((pct / 100) * waypoints.length), waypoints.length - 1);
+
+      const countEl  = document.getElementById(`countdown-${eruId}`);
+      const fillEl   = document.getElementById(`rider-fill-${eruId}`);
+      const statusEl = document.getElementById(`rider-status-${eruId}`);
+
+      if (countEl) countEl.textContent = Math.max(0, secs);
+      if (fillEl)  fillEl.style.width  = pct + "%";
+      if (statusEl) statusEl.textContent = `📍 ${waypoints[wpIdx]}`;
+
+      // Breadcrumb flip at 50%
+      if (pct >= 50) {
+        const s1 = document.getElementById(`step-pickup-${eruId}`);
+        const s2 = document.getElementById(`step-transit-${eruId}`);
+        if (s1 && s1.style.color !== "var(--success)") {
+          s1.style.color = "var(--success)";
+          s1.textContent = "✅ Picked Up";
+        }
+        if (s2) s2.style.color = "var(--teal-dark)";
+      }
+
+      if (secs <= 0) {
+        clearInterval(activeTimers[eruId]);
+        delete activeTimers[eruId];
+        await autoComplete(eruId);
+      }
+    }, 1000);
+  }
+
+  async function autoComplete(eruId) {
+    const wrap = document.getElementById(`countdown-wrap-${eruId}`);
+    if (wrap) {
+      wrap.innerHTML = `
+        <div style="background:var(--teal-pale);border-radius:var(--radius);
+                    padding:12px 16px;text-align:center;font-size:14px;
+                    color:var(--teal-dark);font-weight:700">
+          <i class="fa fa-spinner fa-spin"></i> Marking as Delivered…
+        </div>`;
+    }
+    try {
+      const res  = await fetch("/api/eru/complete", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eru_id: eruId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Delivered! Receipt: ${data.receipt_no} | ₹${Number(data.total).toLocaleString("en-IN")}`, "success");
+        loadERURequests(currentFilter);
+      }
+    } catch {
+      showToast("Auto-complete failed. Please refresh.", "error");
+    }
+  }
+
+  // Resume countdowns on page load/refresh — uses server-calculated eta_remaining
+  function resumeActiveCountdowns(requests) {
+    requests.filter(r => r.status === "in_transit").forEach(r => {
+      const remaining = r.eta_remaining !== undefined ? r.eta_remaining : (r.eta_seconds || 12);
+      if (remaining <= 0) {
+        autoComplete(r.id);
+      } else {
+        const countEl = document.getElementById(`countdown-${r.id}`);
+        if (countEl) countEl.textContent = remaining;
+        startDeliveryCountdown(r.id, r.eta_seconds || 12, remaining);
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadERURequests("");
+    initRiderMap();
+  });
+
+  // ── LIVE MAP ──────────────────────────────────────────────
+  const RIDER_CITY_COORDS = {
+    "Virar":{"lat":19.4588,"lng":72.8110}, "Nalasopara":{"lat":19.4209,"lng":72.7996},
+    "Vasai":{"lat":19.3919,"lng":72.8397}, "Naigaon":{"lat":19.3636,"lng":72.8530},
+    "Bhayandar":{"lat":19.3000,"lng":72.8500}, "Mira Road":{"lat":19.2812,"lng":72.8726},
+    "Dahisar":{"lat":19.2490,"lng":72.8560}, "Borivali":{"lat":19.2307,"lng":72.8567},
+    "Kandivali":{"lat":19.2043,"lng":72.8490}, "Malad":{"lat":19.1863,"lng":72.8484}
+  };
+
+  let riderMap = null;
+  let riderMapMarkers = [];
+
+  function initRiderMap() {
+    riderMap = L.map("rider-live-map", { zoomControl: false }).setView([19.35, 72.83], 11);
+    L.control.zoom({ position: "bottomright" }).addTo(riderMap);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18
+    }).addTo(riderMap);
+    refreshRiderMap();
+  }
+
+  async function refreshRiderMap() {
+    if (!riderMap) return;
+    riderMapMarkers.forEach(m => riderMap.removeLayer(m));
+    riderMapMarkers = [];
+
+    try {
+      const res  = await fetch("/api/eru/list");
+      const data = await res.json();
+      if (!data.length) return;
+
+      const bounds = [];
+      // Use a seeded offset per-request so destinations don't move on refresh
+      data.forEach(r => {
+        const bankCoord = RIDER_CITY_COORDS[r.location];
+        if (!bankCoord) return;
+
+        // Deterministic offset from eru_code hash
+        const seed   = r.id * 9301 + 49297;
+        const offLat = ((seed % 1000) / 1000 * 0.04) - 0.02;
+        const offLng = (((seed * 13) % 1000) / 1000 * 0.04) - 0.02;
+        const destCoord = { lat: bankCoord.lat + offLat, lng: bankCoord.lng + offLng };
+
+        // Blood bank marker
+        const bankIcon = L.divIcon({
+          html:`<div style="background:#e11d48;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3)">🏥</div>`,
+          className:"", iconSize:[26,26], iconAnchor:[13,13]
+        });
+        const bm = L.marker([bankCoord.lat, bankCoord.lng], {icon:bankIcon})
+          .addTo(riderMap)
+          .bindPopup(`<strong>Blood Bank — ${r.location}</strong><br>${r.blood_group} · ${r.units} unit(s)<br>ERU: ${r.eru_code}`);
+        riderMapMarkers.push(bm);
+        bounds.push([bankCoord.lat, bankCoord.lng]);
+
+        // Destination marker
+        const destIcon = L.divIcon({
+          html:`<div style="background:#16a34a;color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.3)">🏨</div>`,
+          className:"", iconSize:[26,26], iconAnchor:[13,13]
+        });
+        const dm = L.marker([destCoord.lat, destCoord.lng], {icon:destIcon})
+          .addTo(riderMap)
+          .bindPopup(`<strong>${r.patient_name || "Patient"}</strong><br>${r.address || r.location}<br>${r.blood_group} · ${r.units} unit(s)`);
+        riderMapMarkers.push(dm);
+        bounds.push([destCoord.lat, destCoord.lng]);
+
+        // Route line
+        const lineColor  = r.status === "in_transit" ? "#2563eb" : r.status === "completed" ? "#16a34a" : "#94a3b8";
+        const dashArray  = r.status === "in_transit" ? null : "6,6";
+        const line = L.polyline([[bankCoord.lat,bankCoord.lng],[destCoord.lat,destCoord.lng]],
+          {color:lineColor, weight:3, dashArray}).addTo(riderMap);
+        riderMapMarkers.push(line);
+
+        // Rider marker — interpolated position for in_transit
+        if (r.status === "in_transit") {
+          const pct    = (r.eta_remaining !== undefined && r.eta_seconds)
+            ? Math.max(0, Math.min(0.95, 1 - r.eta_remaining / r.eta_seconds)) : 0.45;
+          const midLat = bankCoord.lat + (destCoord.lat - bankCoord.lat) * pct;
+          const midLng = bankCoord.lng + (destCoord.lng - bankCoord.lng) * pct;
+          const riderIcon = L.divIcon({
+            html:`<div style="background:#2563eb;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(37,99,235,0.5);animation:pulse 1.4s ease infinite">🏍️</div>`,
+            className:"", iconSize:[32,32], iconAnchor:[16,16]
+          });
+          const rm = L.marker([midLat, midLng], {icon:riderIcon})
+            .addTo(riderMap)
+            .bindPopup(`<strong>${r.eru_code}</strong><br>🏍️ In Transit<br>ETA: ~${r.eta_minutes||"?"} min · ${r.distance_km} km<br>${r.blood_group} → ${r.patient_name||"Patient"}`);
+          riderMapMarkers.push(rm);
+          bounds.push([midLat, midLng]);
+        }
+      });
+
+      if (bounds.length) riderMap.fitBounds(bounds, {padding:[40,40]});
+    } catch (e) { console.error("Map refresh failed:", e); }
+  }
+</script>
+</body>
+</html>

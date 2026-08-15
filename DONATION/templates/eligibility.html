@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eligibility Check — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="eligibility-body">
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood Donation System</span>
+  <div class="nav-user">
+    <i class="fa fa-user-circle"></i>
+    <span id="nav-username">…</span>
+    <span id="nav-role-badge" style="font-size:11px;font-weight:700;background:#dc2626;color:#fff;padding:2px 8px;border-radius:20px;margin-left:6px">Donate</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/profile"><i class="fa fa-medal"></i> Donor Badges</a>
+  <a href="/eligibility" class="active"><i class="fa fa-stethoscope"></i> Eligibility Check</a>
+</nav>
+
+<!-- Back button -->
+<div style="max-width:960px;margin:12px auto 0;padding:0 16px">
+  <a href="/dashboard" style="display:inline-flex;align-items:center;gap:6px;
+     font-size:13px;font-weight:700;color:var(--crimson);background:var(--crimson-pale);
+     border:1.5px solid var(--crimson-soft);border-radius:var(--radius);
+     padding:6px 14px;text-decoration:none;
+     transition:background 0.2s" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--crimson-pale)'">
+    <i class="fa fa-arrow-left"></i> Back to Dashboard
+  </a>
+</div>
+
+<!-- Hero -->
+<div class="eligibility-hero">
+  <div class="hero-icons">🩸 🩺 💉</div>
+  <h1>Donor Health Eligibility Check</h1>
+  <p>Answer a few quick health questions to find out if you're ready to donate blood today. This pre-screening takes under 2 minutes.</p>
+</div>
+
+<!-- Form -->
+<div class="elig-container">
+  <form onsubmit="runEligibilityCheck(event)">
+
+    <div class="elig-grid">
+
+      <!-- Left column: vitals -->
+      <div class="card">
+        <div class="elig-section-title"><i class="fa fa-heartbeat"></i> Basic Vitals</div>
+
+        <div class="field-group teal">
+          <label>Date of Birth <span style="color:#dc2626">*</span> <span style="font-size:10px;color:var(--muted)">(required for donation age check)</span></label>
+          <input type="date" id="elig-dob"
+                 title="Your date of birth">
+        </div>
+
+        <div class="field-group teal">
+          <label>Age (years) <span style="color:#dc2626">*</span> <span style="font-size:10px;color:var(--muted)">(auto-filled from DOB)</span></label>
+          <input type="number" id="elig-age" placeholder="Auto-filled when you pick DOB" min="1" max="120" required
+                 readonly style="background:var(--teal-pale);cursor:not-allowed">
+        </div>
+
+        <div class="field-group teal">
+          <label>Weight (kg) <span style="color:#dc2626">*</span></label>
+          <input type="number" id="elig-weight" placeholder="e.g. 65" min="1" step="0.1" required>
+        </div>
+
+        <div class="field-group teal">
+          <label>Hemoglobin Level (g/dL) <span style="color:#dc2626">*</span></label>
+          <input type="number" id="elig-hb" placeholder="e.g. 13.5" min="1" step="0.1" required>
+        </div>
+
+        <div class="elig-section-title" style="margin-top:20px"><i class="fa fa-heart"></i> Blood Pressure</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field-group teal">
+            <label>Systolic (mmHg)</label>
+            <input type="number" id="elig-bp-sys" placeholder="e.g. 120" min="50" max="250">
+          </div>
+          <div class="field-group teal">
+            <label>Diastolic (mmHg)</label>
+            <input type="number" id="elig-bp-dia" placeholder="e.g. 80" min="30" max="150">
+          </div>
+        </div>
+
+        <div class="field-group teal">
+          <label>Blood Group <span style="color:#dc2626">*</span></label>
+          <select id="elig-blood-group" required>
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+
+        <div class="field-group teal">
+          <label>Last Donation Date (if any)</label>
+          <input type="date" id="elig-last-date"
+                 oninput="validateDonationAgeGate()">
+          <div id="elig-agegate-msg" style="display:none;margin-top:6px;font-size:12.5px;font-weight:600;color:var(--crimson);background:var(--crimson-pale);border:1px solid var(--crimson-soft);border-radius:6px;padding:8px 12px">
+            <i class="fa fa-exclamation-circle"></i>
+            Ineligible: You must have been at least 18 years old at the time of your last donation.
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: health flags -->
+      <div class="card">
+        <div class="elig-section-title"><i class="fa fa-clipboard-list"></i> Health History</div>
+
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+          Check any that apply to you in the last 6 months:
+        </p>
+
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="elig-illness">
+            <label for="elig-illness">Recent illness (fever, infection, cold)</label>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="elig-surgery">
+            <label for="elig-surgery">Recent surgery or major medical procedure</label>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="elig-medication">
+            <label for="elig-medication">Currently on prescription medication</label>
+          </label>
+        </div>
+
+        <!-- Eligibility criteria reference -->
+        <div style="margin-top:24px;padding:16px;background:var(--teal-pale);border-radius:var(--radius);border:1px solid var(--teal-soft)">
+          <p style="font-size:12px;font-weight:700;color:var(--teal-dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
+            <i class="fa fa-info-circle"></i> Eligibility Criteria
+          </p>
+          <ul style="font-size:12.5px;color:var(--slate-600);padding-left:16px;line-height:1.9">
+            <li>Age: 18 – 65 years</li>
+            <li>Weight: minimum 50 kg</li>
+            <li>Hemoglobin: ≥ 12.5 g/dL</li>
+            <li>BP: 90–160 / 60–100 mmHg</li>
+            <li>Last donation: at least 90 days ago</li>
+            <li>No recent illness, surgery, or medication</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center;margin-top:8px">
+      <button type="submit" class="btn btn-teal btn-lg" id="elig-btn">
+        <i class="fa fa-stethoscope"></i> Check Eligibility
+      </button>
+    </div>
+
+  </form>
+
+  <!-- Result renders here -->
+  <div id="elig-result"></div>
+
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  // Set DOB max to today (can't be born in the future)
+  document.getElementById("elig-dob").max = new Date().toISOString().split("T")[0];
+
+  // ── Load logged-in user name into navbar ──
+  (async function loadNavUser() {
+    try {
+      let user = JSON.parse(sessionStorage.getItem("sbdms_user") || "null");
+      if (!user) {
+        const res  = await fetch("/api/me");
+        const data = await res.json();
+        if (data.authenticated) user = data.user;
+      }
+      const el = document.getElementById("nav-username");
+      if (el && user) el.textContent = user.first_name || user.full_name || user.username;
+    } catch {}
+  })();
+
+  // Auto-calculate age from DOB when user picks a date
+  function calcAgeFromDob(dobVal) {
+    if (!dobVal) return;
+    const dob   = new Date(dobVal);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    const ageInput = document.getElementById("elig-age");
+    if (ageInput) ageInput.value = age > 0 ? age : "";
+  }
+
+  // Real-time age-gate check: called whenever either DOB or last donation date changes
+  function validateDonationAgeGate() {
+    const dobVal  = document.getElementById("elig-dob")?.value;
+    const lastVal = document.getElementById("elig-last-date")?.value;
+    const msgEl   = document.getElementById("elig-agegate-msg");
+    const submitBtn = document.getElementById("elig-btn");
+
+    if (!dobVal || !lastVal) {
+      msgEl.style.display = "none";
+      if (submitBtn) submitBtn.disabled = false;
+      return true;   // nothing to validate yet
+    }
+
+    const dob  = new Date(dobVal);
+    const last = new Date(lastVal);
+
+    // Exact age on the donation date
+    let ageAtDonation = last.getFullYear() - dob.getFullYear();
+    const monthDiff   = last.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && last.getDate() < dob.getDate())) {
+      ageAtDonation--;
+    }
+
+    if (ageAtDonation < 18) {
+      msgEl.style.display = "block";
+      if (submitBtn) submitBtn.disabled = true;
+      return false;
+    }
+
+    msgEl.style.display = "none";
+    if (submitBtn) submitBtn.disabled = false;
+    return true;
+  }
+
+  // When DOB changes: auto-fill age AND re-validate age gate
+  document.getElementById("elig-dob").addEventListener("input", function () {
+    calcAgeFromDob(this.value);
+    validateDonationAgeGate();
+  });
+
+  // When last donation date changes: re-validate age gate
+  document.getElementById("elig-last-date").addEventListener("input", validateDonationAgeGate);
+</script>
+</body>
+</html>

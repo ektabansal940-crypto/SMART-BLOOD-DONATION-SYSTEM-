@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="admin-body">
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood — Admin Panel</span>
+  <div class="nav-user" id="admin-nav-user"
+       style="background:rgba(255,255,255,0.15);cursor:pointer"
+       onclick="adminLogout()">
+    <i class="fa fa-shield-alt"></i>
+    <span id="admin-nav-name">Admin</span>
+    <span style="font-size:11px;opacity:0.7;margin-left:4px">(Logout)</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Admin Navigation</div>
+  <a href="/admin-command-panel" class="active"><i class="fa fa-shield-alt"></i> Admin Panel</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payments</a>
+  <a href="/rider"><i class="fa fa-motorcycle"></i> Delivery Partners</a>
+  <a href="/profile"><i class="fa fa-medal"></i> Donor Badges</a>
+</nav>
+
+<div class="main">
+
+  <!-- Admin Hero -->
+  <div class="admin-hero">
+    <div style="font-size:40px">🛡️</div>
+    <div>
+      <h2>Admin Command Panel</h2>
+      <p>Full system control — inventory, users, donations, requests, and delivery oversight.</p>
+    </div>
+    <span class="admin-badge"><i class="fa fa-lock"></i> Admin Only</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchTab('users', this)">
+      <i class="fa fa-users"></i> Users
+    </button>
+    <button class="admin-tab" onclick="switchTab('inventory', this)">
+      <i class="fa fa-tint"></i> Master Inventory
+    </button>
+    <button class="admin-tab" onclick="switchTab('donations', this)">
+      <i class="fa fa-check-circle"></i> Mark Completed
+    </button>
+    <button class="admin-tab" onclick="switchTab('requests', this)">
+      <i class="fa fa-bolt"></i> Emergency Requests
+    </button>
+    <button class="admin-tab" onclick="switchTab('riders', this)">
+      <i class="fa fa-motorcycle"></i> Delivery Partners
+    </button>
+    <button class="admin-tab" onclick="switchTab('system', this)">
+      <i class="fa fa-cog"></i> System Reset
+    </button>
+  </div>
+
+  <!-- ── Panel: Users ── -->
+  <div id="panel-users" class="admin-panel active">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-users"></i> Registered Users</h3>
+        <button class="btn btn-sm btn-outline" onclick="loadAdminUsers()">
+          <i class="fa fa-sync"></i> Refresh
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>City</th>
+              <th>Role</th>
+              <th>Donations</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:20px">
+              <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel: Master Inventory ── -->
+  <div id="panel-inventory" class="admin-panel">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-tint"></i> Master Inventory — All Cities</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="admin-city-filter" onchange="loadAdminInventory()"
+                  style="padding:7px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:13px;outline:none">
+            <option value="">All Locations</option>
+            <option>Virar</option>
+            <option>Nalasopara</option>
+            <option>Vasai</option>
+            <option>Naigaon</option>
+            <option>Bhayandar</option>
+            <option>Mira Road</option>
+            <option>Dahisar</option>
+            <option>Borivali</option>
+            <option>Kandivali</option>
+            <option>Malad</option>
+          </select>
+          <button class="btn btn-sm btn-outline" onclick="loadAdminInventory()">
+            <i class="fa fa-sync"></i> Refresh
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>City</th>
+              <th>Blood Bank</th>
+              <th>Blood Group</th>
+              <th>Units</th>
+              <th>Status</th>
+              <th>Set Units</th>
+            </tr>
+          </thead>
+          <tbody id="inv-admin-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:20px">
+              <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel: Mark Completed ── -->
+  <div id="panel-donations" class="admin-panel">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-check-circle"></i> Mark Donation as Completed</h3>
+        <button class="btn btn-sm btn-outline" onclick="loadDonorsForAdmin()">
+          <i class="fa fa-sync"></i> Refresh
+        </button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Clicking "Mark Completed" records the donation in the database and unlocks the donor's certificate.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Donor Name</th>
+              <th>Blood Group</th>
+              <th>City</th>
+              <th>Phone</th>
+              <th>Total Donations</th>
+              <th>Last Donated</th>
+              <th>Certificate</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="donors-admin-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:20px">
+              <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel: Emergency Requests ── -->
+  <div id="panel-requests" class="admin-panel">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-bolt"></i> Emergency Requests</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="requests-view-filter" onchange="loadAdminRequests()"
+                  style="padding:7px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:13px;outline:none">
+            <option value="recent">Recent Activity (Last 30 days)</option>
+            <option value="all">Full History (All Time)</option>
+          </select>
+          <button class="btn btn-sm btn-outline" onclick="loadAdminRequests()">
+            <i class="fa fa-sync"></i> Refresh
+          </button>
+        </div>
+      </div>
+      <div id="requests-summary" style="padding:12px 20px;background:var(--slate-50);border-bottom:1px solid var(--slate-200);font-size:13px;color:var(--muted);display:none">
+        Showing <strong id="requests-count">0</strong> requests
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Blood Group</th>
+              <th>City</th>
+              <th>Address</th>
+              <th>Units</th>
+              <th>Status</th>
+              <th>Donor</th>
+              <th>Delivery</th>
+              <th>Rider</th>
+              <th>ETA</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="requests-tbody">
+            <tr><td colspan="11" style="text-align:center;padding:20px">
+              <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel: Bloodhound Riders ── -->
+  <div id="panel-riders" class="admin-panel">
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-motorcycle"></i> Bloodhound Delivery Partners</h3>
+        <button class="btn btn-sm btn-outline" onclick="loadAdminRiders()">
+          <i class="fa fa-sync"></i> Refresh
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>City</th>
+              <th>Vehicle</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="riders-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:20px">
+              <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panel: System Reset ── -->
+  <div id="panel-system" class="admin-panel">
+    
+    <!-- System Statistics -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-chart-bar"></i> System Statistics</h3>
+        <button class="btn btn-sm btn-outline" onclick="loadSystemStats()">
+          <i class="fa fa-sync"></i> Refresh
+        </button>
+      </div>
+      <div id="system-stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding:20px">
+        <div style="text-align:center;padding:16px">
+          <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ONE-CLICK DEMO RESET ── -->
+    <div class="card" style="margin-top:20px;border:2px solid #3b82f6">
+      <div class="card-header" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff)">
+        <h3 style="color:#1e40af"><i class="fa fa-bolt"></i> One-Click Demo Reset</h3>
+      </div>
+      <div style="padding:20px">
+        <p style="font-size:13px;color:var(--slate-600);margin-bottom:16px;line-height:1.6">
+          Runs a full hard-reset in one click using direct SQL statements committed immediately to the database file.
+          <br><strong>Clears:</strong> Emergency Requests · Transactions · Delivery Requests · Appointments
+          <br><strong>Sets:</strong> All blood inventory to exactly <strong>20 units</strong> per blood group
+          <br><strong>Preserves:</strong> Users · Donors · Riders
+        </p>
+        <button id="demo-reset-btn"
+                onclick="performDemoReset()"
+                style="display:flex;align-items:center;gap:10px;padding:14px 28px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s;box-shadow:0 4px 16px rgba(59,130,246,0.35);font-family:inherit">
+          <i class="fa fa-database"></i> Run Demo Reset Now
+        </button>
+        <div id="demo-reset-log" style="display:none;margin-top:16px;background:var(--slate-50);border:1.5px solid var(--slate-200);border-radius:var(--radius);padding:14px;font-size:12px;color:var(--slate-700);font-family:monospace;white-space:pre-wrap;line-height:1.7"></div>
+      </div>
+    </div>
+
+    <!-- System Reset Controls -->
+    <div class="card" style="margin-top:20px">
+      <div class="card-header">
+        <h3><i class="fa fa-exclamation-triangle"></i> System Reset (Demo Preparation)</h3>
+      </div>
+      
+      <div style="background:var(--warning-pale);border:1.5px solid var(--warning);border-radius:var(--radius);padding:14px 16px;margin:20px;font-size:13px;color:var(--warning-dark)">
+        <strong><i class="fa fa-info-circle"></i> Important:</strong> System reset will clear test data and restore inventory. User accounts, donors, and riders will NOT be deleted.
+      </div>
+
+      <div style="padding:0 20px 20px">
+        
+        <!-- Reset Options -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          
+          <!-- Clear Emergency Requests -->
+          <div style="border:2px solid var(--slate-200);border-radius:var(--radius);padding:16px">
+            <h4 style="font-size:14px;font-weight:700;color:var(--slate-800);margin-bottom:8px">
+              <i class="fa fa-bolt"></i> Clear Emergency Requests
+            </h4>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+              Deletes all emergency requests and delivery records. Use before demo to start fresh.
+            </p>
+            <button class="btn btn-sm btn-red" style="width:100%" onclick="performReset('requests')">
+              <i class="fa fa-trash"></i> Clear Requests
+            </button>
+          </div>
+
+          <!-- Clear Transactions -->
+          <div style="border:2px solid var(--slate-200);border-radius:var(--radius);padding:16px">
+            <h4 style="font-size:14px;font-weight:700;color:var(--slate-800);margin-bottom:8px">
+              <i class="fa fa-receipt"></i> Clear Transactions
+            </h4>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+              Deletes all payment and transaction records. Financial history will be cleared.
+            </p>
+            <button class="btn btn-sm btn-red" style="width:100%" onclick="performReset('transactions')">
+              <i class="fa fa-trash"></i> Clear Transactions
+            </button>
+          </div>
+
+          <!-- Reset Inventory -->
+          <div style="border:2px solid var(--slate-200);border-radius:var(--radius);padding:16px">
+            <h4 style="font-size:14px;font-weight:700;color:var(--slate-800);margin-bottom:8px">
+              <i class="fa fa-tint"></i> Reset Inventory
+            </h4>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
+              Restores all blood inventory to default levels (25 units per blood group).
+            </p>
+            <div style="margin-bottom:12px">
+              <label style="font-size:11px;font-weight:600;color:var(--slate-600);display:block;margin-bottom:4px">
+                Default Units:
+              </label>
+              <input type="number" id="reset-inventory-units" value="30" min="0" max="100"
+                     style="width:100%;padding:8px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:13px">
+            </div>
+            <button class="btn btn-sm btn-red" style="width:100%" onclick="performReset('inventory')">
+              <i class="fa fa-redo"></i> Reset Inventory
+            </button>
+          </div>
+
+          <!-- Full System Reset -->
+          <div style="border:2px solid var(--crimson);border-radius:var(--radius);padding:16px;background:var(--crimson-pale)">
+            <h4 style="font-size:14px;font-weight:700;color:var(--crimson);margin-bottom:8px">
+              <i class="fa fa-exclamation-triangle"></i> Full System Reset
+            </h4>
+            <p style="font-size:12px;color:var(--crimson-dark);margin-bottom:12px">
+              <strong>⚠️ WARNING:</strong> Clears ALL test data and resets inventory. Use before final demo.
+            </p>
+            <button class="btn btn-sm btn-red" style="width:100%" onclick="performReset('all')">
+              <i class="fa fa-bomb"></i> Full Reset
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Reset Log -->
+        <div id="reset-log" style="display:none;background:var(--slate-50);border:1.5px solid var(--slate-200);border-radius:var(--radius);padding:14px;margin-top:16px">
+          <h4 style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:8px">
+            <i class="fa fa-history"></i> Reset Log
+          </h4>
+          <div id="reset-log-content" style="font-size:12px;color:var(--slate-600);font-family:monospace;white-space:pre-wrap"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  // ── Tab switching ──
+  function switchTab(name, btn) {
+    document.querySelectorAll(".admin-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".admin-tab").forEach(b => b.classList.remove("active"));
+    document.getElementById("panel-" + name).classList.add("active");
+    btn.classList.add("active");
+    // Lazy-load on first open
+    const loaders = {
+      users: loadAdminUsers, inventory: loadAdminInventory,
+      donations: loadDonorsForAdmin, requests: loadAdminRequests,
+      riders: loadAdminRiders,
+      system: loadSystemStats
+    };
+    if (loaders[name]) loaders[name]();
+  }
+
+  // ── Users ──
+  async function loadAdminUsers() {
+    const tbody = document.getElementById("users-tbody");
+    try {
+      const res  = await fetch("/api/admin/users");
+      if (res.status === 403) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--crimson);padding:20px">Admin access required. Please log in as admin.</td></tr>`; return; }
+      const data = await res.json();
+      if (!data.length) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No users found</td></tr>`; return; }
+      tbody.innerHTML = data.map((u, i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td><strong>${u.name || "—"}</strong></td>
+          <td><code>${u.username}</code></td>
+          <td>${u.email}</td>
+          <td>${u.phone || "—"}</td>
+          <td>${u.city || "—"}</td>
+          <td><span class="badge ${u.role === "admin" ? "badge-critical" : "badge-available"}">${u.role}</span></td>
+          <td><strong style="color:var(--crimson)">${u.donations}</strong></td>
+          <td>${u.created}</td>
+        </tr>`).join("");
+    } catch { tbody.innerHTML = `<tr><td colspan="9" style="color:var(--crimson);text-align:center;padding:20px">Failed to load</td></tr>`; }
+  }
+
+  // ── Master Inventory ──
+  async function loadAdminInventory() {
+    const tbody = document.getElementById("inv-admin-tbody");
+    const city  = document.getElementById("admin-city-filter")?.value || "";
+    try {
+      const url  = city ? `/api/inventory?city=${encodeURIComponent(city)}` : "/api/admin/inventory/all";
+      const res  = await fetch(url);
+      if (res.status === 403) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--crimson);padding:20px">Admin access required.</td></tr>`; return; }
+      const data = await res.json();
+      if (!data.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No inventory found</td></tr>`; return; }
+      tbody.innerHTML = data.map(i => `
+        <tr>
+          <td><strong>${i.city}</strong></td>
+          <td style="font-size:12px;color:var(--muted)">${i.bank_name || "—"}</td>
+          <td><span class="blood-badge">${i.blood_group}</span></td>
+          <td><strong>${i.units}</strong></td>
+          <td><span class="badge badge-${i.status}">${i.status}</span></td>
+          <td>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="number" class="units-input" id="inv-${i.id}" value="${i.units}" min="0" max="999">
+              <button class="btn btn-sm btn-teal" onclick="setInventoryUnits(${i.id},'${i.blood_group}','${i.city}')">
+                <i class="fa fa-save"></i>
+              </button>
+            </div>
+          </td>
+        </tr>`).join("");
+    } catch { tbody.innerHTML = `<tr><td colspan="6" style="color:var(--crimson);text-align:center;padding:20px">Failed to load</td></tr>`; }
+  }
+
+  async function setInventoryUnits(id, bg, city) {
+    const val = parseInt(document.getElementById(`inv-${id}`)?.value || 0);
+    try {
+      const res  = await fetch("/api/admin/inventory/set", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blood_group: bg, city, units: val })
+      });
+      const data = await res.json();
+      if (data.success) { showToast(`${bg} (${city}) set to ${data.units} units`, "success"); loadAdminInventory(); }
+      else showToast(data.message, "error");
+    } catch { showToast("Update failed", "error"); }
+  }
+
+  // ── Donors for Mark Completed ──
+  async function loadDonorsForAdmin() {
+    const tbody = document.getElementById("donors-admin-tbody");
+    try {
+      const res  = await fetch("/api/donors");
+      const data = await res.json();
+      if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No donors found</td></tr>`; return; }
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td><strong>${d.name}</strong></td>
+          <td><span class="blood-badge">${d.blood_group}</span></td>
+          <td>${d.city}</td>
+          <td>${d.phone || "—"}</td>
+          <td><strong style="color:var(--crimson)">${d.donations}</strong></td>
+          <td>${d.last_donated || "Never"}</td>
+          <td id="cert-status-${d.id}"><span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block"></span></td>
+          <td>
+            <button class="btn-complete" onclick="adminMarkCompleted(${d.id}, this)">
+              <i class="fa fa-check"></i> Mark Completed
+            </button>
+          </td>
+        </tr>`).join("");
+      // Check cert status for each
+      data.forEach(d => checkCertStatusAdmin(d.id));
+    } catch { tbody.innerHTML = `<tr><td colspan="8" style="color:var(--crimson);text-align:center;padding:20px">Failed to load</td></tr>`; }
+  }
+
+  async function checkCertStatusAdmin(donorId) {
+    try {
+      const res  = await fetch(`/api/donation/check/${donorId}`);
+      const data = await res.json();
+      const cell = document.getElementById(`cert-status-${donorId}`);
+      if (cell) {
+        cell.innerHTML = data.has_completed
+          ? `<span class="badge badge-fulfilled">✓ Unlocked</span>`
+          : `<span class="badge badge-pending">Locked</span>`;
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function adminMarkCompleted(donorId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Saving...`;
+    try {
+      const res  = await fetch("/api/donation/complete", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ donor_id: donorId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, "success");
+        loadDonorsForAdmin();
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa fa-check"></i> Mark Completed`;
+        showToast(data.message, "error");
+      }
+    } catch {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-check"></i> Mark Completed`;
+      showToast("Failed", "error");
+    }
+  }
+
+  // ── Emergency Requests ──
+  async function loadAdminRequests() {
+    const tbody = document.getElementById("requests-tbody");
+    const summary = document.getElementById("requests-summary");
+    const countEl = document.getElementById("requests-count");
+    const viewFilter = document.getElementById("requests-view-filter")?.value || "recent";
+    
+    try {
+      const url = `/api/admin/requests?view=${viewFilter}`;
+      const res  = await fetch(url);
+      if (res.status === 403) { 
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--crimson);padding:20px">Admin access required.</td></tr>`; 
+        summary.style.display = "none";
+        return; 
+      }
+      const data = await res.json();
+      
+      // Update summary
+      if (data.length > 0) {
+        countEl.textContent = data.length;
+        summary.style.display = "block";
+      } else {
+        summary.style.display = "none";
+      }
+      
+      if (!data.length) { 
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">
+          ${viewFilter === 'recent' ? 'No recent requests (last 30 days)' : 'No requests found'}
+        </td></tr>`; 
+        return; 
+      }
+      
+      tbody.innerHTML = data.map((r, i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td><span class="blood-badge">${r.blood_group}</span></td>
+          <td>${r.location}</td>
+          <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis">${r.address || "—"}</td>
+          <td>${r.units}</td>
+          <td><span class="badge badge-${r.status}">${r.status}</span></td>
+          <td>${r.donor_name || "—"}</td>
+          <td><span class="badge badge-${r.delivery_status === "Completed" || r.delivery_status === "Delivered" ? "fulfilled" : r.delivery_status === "In Transit" ? "pending" : "low"}">${r.delivery_status}</span></td>
+          <td>${r.rider}</td>
+          <td>${r.eta}</td>
+          <td style="font-size:11px;color:var(--muted)">${r.requested_at}</td>
+        </tr>`).join("");
+    } catch { 
+      tbody.innerHTML = `<tr><td colspan="11" style="color:var(--crimson);text-align:center;padding:20px">Failed to load</td></tr>`; 
+      summary.style.display = "none";
+    }
+  }
+
+  // ── Riders ──
+  async function loadAdminRiders() {
+    const tbody = document.getElementById("riders-tbody");
+    try {
+      const res  = await fetch("/api/rider/all");
+      const data = await res.json();
+      if (!data.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No riders found</td></tr>`; return; }
+      tbody.innerHTML = data.map((r, i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td><strong>${r.name}</strong></td>
+          <td>${r.phone}</td>
+          <td>${r.city}</td>
+          <td>${r.vehicle}</td>
+          <td><span class="badge ${r.is_free ? "badge-available" : "badge-pending"}">${r.is_free ? "Free" : "On Delivery"}</span></td>
+        </tr>`).join("");
+    } catch { tbody.innerHTML = `<tr><td colspan="6" style="color:var(--crimson);text-align:center;padding:20px">Failed to load</td></tr>`; }
+  }
+
+  // Auto-load first tab
+  document.addEventListener("DOMContentLoaded", loadAdminUsers);
+
+  // ── Admin session guard ──
+  (async function guardAdminSession() {
+    try {
+      const res  = await fetch("/api/me");
+      const data = await res.json();
+      if (!data.authenticated) {
+        window.location.replace("/admin-entry?error=login_required");
+        return;
+      }
+      if (data.user?.role !== "admin") {
+        window.location.replace("/admin-entry?error=unauthorized");
+        return;
+      }
+      // Show admin name in navbar
+      const nameEl = document.getElementById("admin-nav-name");
+      if (nameEl) nameEl.textContent = data.user.full_name || data.user.username;
+    } catch {
+      window.location.replace("/admin-entry?error=login_required");
+    }
+  })();
+
+  async function adminLogout() {
+    await fetch("/api/logout", { method: "POST" });
+    window.location.replace("/admin-entry");
+  }
+
+  // ── Add Admin ──
+  async function createNewAdmin() {
+    const username = document.getElementById("new-admin-username")?.value.trim();
+    const password = document.getElementById("new-admin-password")?.value;
+    const email    = document.getElementById("new-admin-email")?.value.trim();
+    const msg      = document.getElementById("new-admin-msg");
+
+    if (!username || !password) {
+      msg.textContent = "Username and password are required.";
+      msg.className   = "msg-box msg-error";
+      return;
+    }
+
+    try {
+      const res  = await fetch("/api/admin/add-admin", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ username, password, email })
+      });
+      const data = await res.json();
+      msg.textContent = data.message;
+      msg.className   = `msg-box ${data.success ? "msg-success" : "msg-error"}`;
+      if (data.success) {
+        document.getElementById("new-admin-username").value = "";
+        document.getElementById("new-admin-password").value = "";
+        document.getElementById("new-admin-email").value    = "";
+        loadAdminAccounts();
+        showToast(data.message, "success");
+      }
+    } catch {
+      msg.textContent = "Network error. Please try again.";
+      msg.className   = "msg-box msg-error";
+    }
+  }
+
+  async function loadAdminAccounts() {
+    const tbody = document.getElementById("admin-accounts-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:16px">
+      <div class="spinner" style="width:22px;height:22px;border-width:2px;margin:auto"></div>
+    </td></tr>`;
+    try {
+      const res  = await fetch("/api/admin/users");
+      const data = await res.json();
+      const admins = data.filter(u => u.role === "admin");
+      if (!admins.length) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">
+          No admin accounts found
+        </td></tr>`;
+        return;
+      }
+      tbody.innerHTML = admins.map(u => `
+        <tr>
+          <td><code style="font-weight:700;color:var(--crimson)">${u.username}</code></td>
+          <td style="font-size:12px;color:var(--muted)">${u.email}</td>
+          <td>${u.city || "—"}</td>
+          <td style="font-size:12px;color:var(--muted)">${u.created}</td>
+        </tr>`).join("");
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="4" style="color:var(--crimson);text-align:center;padding:16px">
+        Failed to load
+      </td></tr>`;
+    }
+  }
+
+  // ── System Stats ──
+  async function loadSystemStats() {
+    const grid = document.getElementById("system-stats-grid");
+    try {
+      const res  = await fetch("/api/admin/system-stats");
+      const data = await res.json();
+      
+      const stats = [
+        { label: "Total Users", value: data.users, icon: "fa-users", color: "var(--info)" },
+        { label: "Admin Accounts", value: data.admins, icon: "fa-user-shield", color: "var(--crimson)" },
+        { label: "Registered Donors", value: data.donors, icon: "fa-hand-holding-heart", color: "var(--success)" },
+        { label: "Bloodhound Riders", value: data.riders, icon: "fa-motorcycle", color: "var(--teal)" },
+        { label: "Emergency Requests", value: data.emergency_requests, icon: "fa-bolt", color: "var(--warning)" },
+        { label: "Pending Requests", value: data.pending_requests, icon: "fa-clock", color: "var(--warning)" },
+        { label: "Fulfilled Requests", value: data.fulfilled_requests, icon: "fa-check-circle", color: "var(--success)" },
+        { label: "Total Transactions", value: data.transactions, icon: "fa-receipt", color: "var(--info)" },
+        { label: "Appointments", value: data.appointments, icon: "fa-calendar", color: "var(--teal)" },
+        { label: "Total Inventory Units", value: data.total_inventory_units, icon: "fa-tint", color: "var(--crimson)" },
+        { label: "Low Stock Items", value: data.low_stock_items, icon: "fa-exclamation-triangle", color: "var(--warning)" },
+        { label: "Critical Stock Items", value: data.critical_stock_items, icon: "fa-exclamation-circle", color: "var(--crimson)" },
+      ];
+      
+      grid.innerHTML = stats.map(s => `
+        <div style="background:var(--white);border:2px solid var(--slate-200);border-radius:var(--radius);padding:16px;text-align:center">
+          <div style="font-size:28px;color:${s.color};margin-bottom:8px">
+            <i class="fa ${s.icon}"></i>
+          </div>
+          <div style="font-size:24px;font-weight:800;color:var(--slate-800);margin-bottom:4px">${s.value}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:600">${s.label}</div>
+        </div>
+      `).join("");
+    } catch {
+      grid.innerHTML = `<div style="text-align:center;color:var(--crimson);padding:20px;grid-column:1/-1">
+        Failed to load system statistics
+      </div>`;
+    }
+  }
+
+  // ── One-Click Demo Reset ──
+  async function performDemoReset() {
+    if (!confirm("⚠️ This will DELETE all emergency requests, transactions, delivery requests, and appointments, and SET all inventory to 20 units.\n\nUser accounts, donors, and riders are NOT affected.\n\nContinue?")) {
+      return;
+    }
+
+    const btn    = document.getElementById("demo-reset-btn");
+    const logEl  = document.getElementById("demo-reset-log");
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Resetting...`;
+    logEl.style.display = "block";
+    logEl.textContent   = `[${new Date().toLocaleTimeString()}] Starting demo reset...\n`;
+
+    try {
+      const res  = await fetch("/api/demo-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const s = data.summary;
+        const v = data.verification;
+        logEl.textContent +=
+          `[${new Date().toLocaleTimeString()}] ✅ COMPLETE\n\n` +
+          `DELETED:\n` +
+          `  • Emergency Requests : ${s.emergency_requests_deleted}\n` +
+          `  • Transactions       : ${s.transactions_deleted}\n` +
+          `  • Delivery Requests  : ${s.delivery_requests_deleted}\n` +
+          `  • Appointments       : ${s.appointments_deleted}\n\n` +
+          `INVENTORY:\n` +
+          `  • Rows reset to 20u  : ${s.inventory_rows_reset}\n\n` +
+          `VERIFICATION:\n` +
+          `  • emergency_request  : ${v.emergency_request_count} rows (expected 0)\n` +
+          `  • transaction        : ${v.transaction_count} rows (expected 0)\n` +
+          `  • inventory ≠ 20u    : ${v.inventory_rows_not_20} rows (expected 0)\n\n` +
+          `Completed at: ${data.timestamp}`;
+        btn.innerHTML = `<i class="fa fa-check-circle"></i> Reset Complete`;
+        btn.style.background = "linear-gradient(135deg,#059669,#10b981)";
+        // Reload stats
+        setTimeout(() => loadSystemStats(), 800);
+      } else {
+        logEl.textContent += `[${new Date().toLocaleTimeString()}] ❌ FAILED: ${data.message}\n`;
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa fa-database"></i> Run Demo Reset Now`;
+      }
+    } catch (err) {
+      logEl.textContent += `[${new Date().toLocaleTimeString()}] ❌ Network error: ${err}\n`;
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-database"></i> Run Demo Reset Now`;
+    }
+  }
+
+  // ── System Reset ──
+  async function performReset(type) {
+    const typeNames = {
+      'requests': 'Emergency Requests',
+      'transactions': 'Transactions',
+      'inventory': 'Inventory',
+      'all': 'ALL DATA (Full System Reset)'
+    };
+    
+    const typeName = typeNames[type] || type;
+    
+    if (!confirm(`⚠️ WARNING: This will reset ${typeName}.\n\nThis action cannot be undone. Continue?`)) {
+      return;
+    }
+    
+    const logEl = document.getElementById("reset-log");
+    const logContent = document.getElementById("reset-log-content");
+    
+    logEl.style.display = "block";
+    logContent.textContent = `[${new Date().toLocaleTimeString()}] Starting ${typeName} reset...\n`;
+    
+    try {
+      const payload = {
+        type: type,
+        confirm: true
+      };
+      
+      // Add default units for inventory reset
+      if (type === 'inventory' || type === 'all') {
+        const unitsInput = document.getElementById("reset-inventory-units");
+        payload.default_units = parseInt(unitsInput?.value || 30);
+      }
+      
+      const res = await fetch("/api/admin/system-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        logContent.textContent += `[${new Date().toLocaleTimeString()}] ✅ SUCCESS\n\n`;
+        logContent.textContent += `Summary:\n`;
+        data.summary.forEach(line => {
+          logContent.textContent += `  • ${line}\n`;
+        });
+        logContent.textContent += `\nCompleted at: ${data.timestamp}\n`;
+        
+        showToast(`${typeName} reset completed successfully`, "success");
+        
+        // Refresh relevant tabs
+        loadSystemStats();
+        if (type === 'requests' || type === 'all') loadAdminRequests();
+        if (type === 'inventory' || type === 'all') loadAdminInventory();
+      } else {
+        logContent.textContent += `[${new Date().toLocaleTimeString()}] ❌ FAILED\n`;
+        logContent.textContent += `Error: ${data.message}\n`;
+        showToast(`Reset failed: ${data.message}`, "error");
+      }
+    } catch (err) {
+      logContent.textContent += `[${new Date().toLocaleTimeString()}] ❌ ERROR\n`;
+      logContent.textContent += `${err.message}\n`;
+      showToast("Reset failed: Network error", "error");
+    }
+  }
+</script>
+</body>
+</html>

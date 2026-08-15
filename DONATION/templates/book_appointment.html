@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Appointment — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="app-body">
+
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood Donation System</span>
+  <div class="nav-user">
+    <i class="fa fa-user-circle"></i>
+    <span id="nav-username">…</span>
+    <span id="nav-role-badge" style="font-size:11px;font-weight:700;background:#dc2626;color:#fff;padding:2px 8px;border-radius:20px;margin-left:6px">Donate</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/profile"><i class="fa fa-medal"></i> Donor Badges</a>
+  <a href="/eligibility"><i class="fa fa-stethoscope"></i> Eligibility Check</a>
+  <a href="/book_appointment" class="active"><i class="fa fa-calendar-check"></i> Book Appointment</a>
+</nav>
+
+<div class="main">
+  <div class="page-title">
+    <a href="/eligibility" style="display:inline-flex;align-items:center;gap:6px;
+       font-size:13px;font-weight:700;color:var(--crimson);background:var(--crimson-pale);
+       border:1.5px solid var(--crimson-soft);border-radius:var(--radius);
+       padding:6px 14px;text-decoration:none;margin-bottom:10px;
+       transition:background 0.2s,transform 0.15s" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--crimson-pale)'">
+      <i class="fa fa-arrow-left"></i> Back to Eligibility
+    </a>
+    <div><i class="fa fa-calendar-check"></i> Book Donation Appointment</div>
+  </div>
+
+  <!-- Eligibility reminder banner -->
+  <div style="background:var(--teal-pale);border:1.5px solid var(--teal-soft);border-radius:var(--radius-lg);padding:18px 22px;margin-bottom:24px;display:flex;align-items:center;gap:14px">
+    <i class="fa fa-info-circle" style="color:var(--teal);font-size:22px;flex-shrink:0"></i>
+    <div>
+      <strong style="color:var(--teal-dark)">Eligibility Required</strong>
+      <p style="font-size:13px;color:var(--muted);margin-top:2px">
+        You must pass the health eligibility check before booking.
+        Age 18–65, weight ≥ 50 kg, hemoglobin ≥ 12.5 g/dL, and at least 90 days since last donation.
+        <a href="/eligibility" style="color:var(--teal);font-weight:600">Check eligibility →</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="two-col">
+
+    <!-- Appointment Form -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-calendar-plus"></i> Schedule Your Donation</h3>
+      </div>
+
+      <form onsubmit="bookAppointment(event)">
+        <div class="field-group">
+          <label>Full Name <span style="color:#dc2626">*</span></label>
+          <input type="text" id="appt-name" placeholder="Your full name" required>
+        </div>
+
+        <!-- Phone with +91 prefix -->
+        <div class="field-group">
+          <label>Phone <span style="color:#dc2626">*</span> <span style="font-size:10px;color:var(--muted)">(10 digits, +91 format)</span></label>
+          <div class="phone-wrap">
+            <span class="phone-prefix">+91</span>
+            <input type="tel" id="appt-phone-digits"
+                   placeholder="9XXXXXXXXX"
+                   maxlength="10"
+                   inputmode="numeric"
+                   autocomplete="tel"
+                   oninput="validateApptPhone(this)"
+                   required>
+          </div>
+          <div id="appt-phone-hint" class="field-hint">Enter 10 digits starting with 9, 8, or 7</div>
+        </div>
+
+        <div class="field-group">
+          <label>Blood Group <span style="color:#dc2626">*</span>
+            <span style="font-size:10px;color:var(--teal-dark);font-weight:600">
+              <i class="fa fa-lock"></i> Pre-filled from eligibility check
+            </span>
+          </label>
+          <select id="appt-blood" required disabled>
+            <option value="">Select</option>
+            <option {% if elig_blood_group == 'A+' %}selected{% endif %}>A+</option>
+            <option {% if elig_blood_group == 'A-' %}selected{% endif %}>A-</option>
+            <option {% if elig_blood_group == 'B+' %}selected{% endif %}>B+</option>
+            <option {% if elig_blood_group == 'B-' %}selected{% endif %}>B-</option>
+            <option {% if elig_blood_group == 'O+' %}selected{% endif %}>O+</option>
+            <option {% if elig_blood_group == 'O-' %}selected{% endif %}>O-</option>
+            <option {% if elig_blood_group == 'AB+' %}selected{% endif %}>AB+</option>
+            <option {% if elig_blood_group == 'AB-' %}selected{% endif %}>AB-</option>
+          </select>
+          <!-- Hidden input so disabled select value is still submitted -->
+          <input type="hidden" id="appt-blood-hidden" value="{{ elig_blood_group }}">
+        </div>
+
+        <div class="field-group">
+          <label>Preferred Date <span style="color:#dc2626">*</span></label>
+          <input type="date" id="appt-date" required>
+        </div>
+
+        <div class="field-group">
+          <label>Preferred Time Slot <span style="color:#dc2626">*</span></label>
+          <select id="appt-slot" required>
+            <option value="">Select slot</option>
+            <option>09:00 AM – 10:00 AM</option>
+            <option>10:00 AM – 11:00 AM</option>
+            <option>11:00 AM – 12:00 PM</option>
+            <option>02:00 PM – 03:00 PM</option>
+            <option>03:00 PM – 04:00 PM</option>
+            <option>04:00 PM – 05:00 PM</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label>Blood Bank / Centre <span style="color:#dc2626">*</span></label>
+          <select id="appt-centre" required>
+            <option value="">Select centre</option>
+            <option>Virar Central Blood Bank, Station Road</option>
+            <option>Nalasopara Blood Centre, East</option>
+            <option>Vasai Central Blood Bank, Vasai Road</option>
+            <option>Naigaon Blood Centre, Near Station</option>
+            <option>Bhayandar Central Blood Bank, West</option>
+            <option>Mira Road Blood Centre, Sector 1</option>
+            <option>Dahisar Central Blood Bank, East</option>
+            <option>Borivali Blood Centre, S.V. Road</option>
+            <option>Kandivali Central Blood Bank, West</option>
+            <option>Malad Blood Centre, Malad West</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label>Date of Birth <span style="color:#dc2626">*</span>
+            <span style="font-size:10px;color:var(--teal-dark);font-weight:600">
+              <i class="fa fa-lock"></i> Pre-filled from eligibility check
+            </span>
+          </label>
+          <input type="date" id="appt-dob" required readonly
+                 value="{{ elig_dob }}"
+                 title="Set during eligibility check — cannot be changed here"
+                 style="background:var(--teal-pale);cursor:not-allowed">
+        </div>
+
+        <div class="field-group">
+          <label>Last Donation Date (if any)
+            <span style="font-size:10px;color:var(--teal-dark);font-weight:600">
+              <i class="fa fa-lock"></i> Pre-filled from eligibility check
+            </span>
+          </label>
+          <input type="date" id="appt-last-donated" readonly
+                 value="{{ elig_last_date }}"
+                 title="Set during eligibility check — cannot be changed here"
+                 style="background:var(--teal-pale);cursor:not-allowed">
+          <div id="appt-agegate-msg" style="display:none;margin-top:6px;font-size:12.5px;font-weight:600;color:var(--crimson);background:var(--crimson-pale);border:1px solid var(--crimson-soft);border-radius:6px;padding:8px 12px">
+            <i class="fa fa-exclamation-circle"></i>
+            Ineligible: You must have been at least 18 years old at the time of your last donation.
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-teal btn-lg" style="width:100%;justify-content:center" id="appt-btn">
+          <i class="fa fa-calendar-check"></i> Confirm Appointment
+        </button>
+        <div id="appt-msg" class="msg-box" style="margin-top:10px"></div>
+      </form>
+    </div>
+
+    <!-- Confirmation / Info panel -->
+    <div>
+      <div class="card" id="appt-confirm" style="display:none">
+        <div class="card-header">
+          <h3><i class="fa fa-check-circle" style="color:var(--success)"></i> Appointment Confirmed</h3>
+        </div>
+        <div style="text-align:center;padding:20px 10px">
+          <div style="font-size:56px;margin-bottom:12px">🩸</div>
+          <h3 id="conf-name" style="color:var(--slate-800);font-size:18px"></h3>
+          <p id="conf-details" style="color:var(--muted);font-size:14px;margin-top:8px;line-height:1.8"></p>
+          <div style="margin-top:20px;padding:14px;background:var(--teal-pale);border-radius:var(--radius);border:1px solid var(--teal-soft)">
+            <p style="font-size:13px;color:var(--teal-dark);font-weight:600">
+              <i class="fa fa-info-circle"></i> What to bring
+            </p>
+            <ul style="font-size:13px;color:var(--slate-600);padding-left:18px;margin-top:8px;line-height:1.9">
+              <li>Government-issued photo ID</li>
+              <li>Eat a light meal 2–3 hours before</li>
+              <li>Stay well hydrated</li>
+              <li>Wear comfortable, loose clothing</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  // ── Date constraints ──
+  document.getElementById("appt-date").min = new Date().toISOString().split("T")[0];
+
+  // ── Auto-fill name & phone from logged-in user ──
+  (async function prefillUserDetails() {
+    try {
+      // First try sessionStorage for immediate fill (no network round trip)
+      let user = JSON.parse(sessionStorage.getItem("sbdms_user") || "null");
+      if (!user) {
+        const res  = await fetch("/api/me");
+        const data = await res.json();
+        if (data.authenticated) user = data.user;
+      }
+      if (!user) return;
+
+      // Update navbar name
+      const navEl = document.getElementById("nav-username");
+      if (navEl) navEl.textContent = user.first_name || user.full_name || user.username;
+
+      // Fill name if field is empty
+      const nameEl = document.getElementById("appt-name");
+      if (nameEl && !nameEl.value) {
+        nameEl.value = user.full_name || "";
+      }
+
+      // Fill phone digits if field is empty
+      const phoneEl = document.getElementById("appt-phone-digits");
+      if (phoneEl && !phoneEl.value && user.phone) {
+        // Strip the +91 prefix to get just the 10 digits
+        const digits = user.phone.replace(/^\+91/, "").trim();
+        phoneEl.value = digits;
+        validateApptPhone(phoneEl);
+      }
+    } catch { /* silent fail — user can fill manually */ }
+  })();
+
+  function validateApptPhone(inp) {
+    const hint = document.getElementById("appt-phone-hint");
+    // Strip anything that isn't a digit
+    inp.value = inp.value.replace(/\D/g, "").slice(0, 10);
+    const val = inp.value;
+
+    if (val.length === 0) {
+      hint.textContent  = "Enter 10 digits starting with 9, 8, or 7";
+      hint.className    = "field-hint";
+    } else if (!/^[987]/.test(val)) {
+      hint.textContent  = "✗ First digit must be 9, 8, or 7";
+      hint.className    = "field-hint error";
+    } else if (val.length < 10) {
+      hint.textContent  = `${10 - val.length} more digit(s) needed`;
+      hint.className    = "field-hint";
+    } else {
+      hint.textContent  = "✓ Valid number";
+      hint.className    = "field-hint ok";
+    }
+  }
+
+  // ── Age-gate check is handled by the eligibility page; fields are readonly here ──
+
+  // ── Book Appointment ──
+  async function bookAppointment(e) {
+    e.preventDefault();
+    const name        = document.getElementById("appt-name").value.trim();
+    const phoneDigits = document.getElementById("appt-phone-digits").value.trim();
+    const dob         = document.getElementById("appt-dob").value;
+    // Blood group comes from hidden input (the select is disabled)
+    const blood       = document.getElementById("appt-blood-hidden").value;
+    const date        = document.getElementById("appt-date").value;
+    const slot        = document.getElementById("appt-slot").value;
+    const centre      = document.getElementById("appt-centre").value;
+    const lastDon     = document.getElementById("appt-last-donated").value;
+    const msg         = document.getElementById("appt-msg");
+    const btn         = document.getElementById("appt-btn");
+
+    // ── Phone validation ──
+    if (!/^[987]\d{9}$/.test(phoneDigits)) {
+      setMsg(msg,
+        "Phone must be exactly 10 digits and start with 9, 8, or 7 (e.g. 9876543210).",
+        "error");
+      document.getElementById("appt-phone-digits").focus();
+      return;
+    }
+    const phone = "+91" + phoneDigits;   // full E.164 format
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Booking...`;
+
+    try {
+      const res  = await fetch("/api/appointment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, dob, blood_group: blood,
+                               date, slot, centre, last_donated: lastDon })
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        setMsg(msg, data.message, "error");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa fa-calendar-check"></i> Confirm Appointment`;
+        return;
+      }
+
+      msg.textContent = "";
+      const conf = document.getElementById("appt-confirm");
+      conf.style.display = "block";
+      document.getElementById("conf-name").textContent = `${name} — ${blood}`;
+      document.getElementById("conf-details").innerHTML =
+        `📅 <strong>${new Date(date).toDateString()}</strong><br>
+         🕐 ${slot}<br>
+         🏥 ${centre}<br>
+         📞 ${phone}`;
+
+      showToast("Appointment confirmed!", "success");
+      conf.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {
+      setMsg(msg, "Network error. Please try again.", "error");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-calendar-check"></i> Confirm Appointment`;
+    }
+  }
+</script>
+</body>
+</html>

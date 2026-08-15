@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 60%, #020617 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 36px 32px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.55);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    }
+
+    /* ── Logo ── */
+    .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+      box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.06); }
+    }
+    .logo-icon i { font-size: 32px; color: #fff; }
+    .logo h1 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0 0 4px; }
+    .logo p  { font-size: 13px; color: #64748b; margin: 0 0 10px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #eff6ff; border: 1.5px solid #93c5fd;
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 10px; font-weight: 700; color: #1e40af;
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; gap: 6px;
+      background: #f1f5f9; padding: 4px; border-radius: 10px;
+      margin-bottom: 22px;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 8px;
+      border: none; background: transparent; border-radius: 7px;
+      font-size: 13px; font-weight: 700; color: #64748b;
+      cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .tab-btn.active {
+      background: #fff; color: #9b1c1c;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ── Sections ── */
+    .section { display: none; }
+    .section.active { display: block; animation: fadeUp 0.25s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: #eff6ff; border: 1.5px solid #93c5fd;
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 18px;
+      font-size: 12px; color: #1e40af; line-height: 1.6;
+    }
+    .info-box strong { display: block; font-size: 13px; margin-bottom: 4px; }
+
+    /* ── Form ── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block; font-size: 11.5px; font-weight: 700;
+      color: #475569; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .field input {
+      width: 100%; padding: 11px 13px;
+      border: 2px solid #e2e8f0; border-radius: 9px;
+      font-size: 14px; color: #1e293b; background: #f8fafc;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .field input:focus {
+      border-color: #3b82f6; background: #fff;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 42px; }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      color: #94a3b8; font-size: 14px; padding: 0;
+    }
+    .eye-btn:hover { color: #3b82f6; }
+    .hint { font-size: 11px; color: #94a3b8; margin-top: 5px; }
+
+    /* ── Submit button ── */
+    .submit-btn {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff; border: none; border-radius: 9px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+      font-family: inherit; margin-top: 6px;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── Messages ── */
+    .msg {
+      margin-top: 12px; padding: 10px 13px;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      text-align: center; display: none;
+    }
+    .msg.error   { display: block; background: #fef2f2; border: 1.5px solid #fca5a5; color: #991b1b; }
+    .msg.success { display: block; background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; }
+
+    /* ── Footer ── */
+    .footer { text-align: center; margin-top: 20px; font-size: 13px; color: #94a3b8; }
+    .footer a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="logo">
+    <div class="logo-icon"><i class="fa fa-user-shield"></i></div>
+    <h1>Admin Portal</h1>
+    <p>Smart Blood Donation Management System</p>
+    <span class="badge"><i class="fa fa-key"></i> Authorized Access Only</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-signup" onclick="showTab('signup')">
+      <i class="fa fa-user-plus"></i> Create Admin
+    </button>
+    <button class="tab-btn" id="tab-login" onclick="showTab('login')">
+      <i class="fa fa-sign-in-alt"></i> Admin Login
+    </button>
+  </div>
+
+  <!-- ── Section: Create Admin ── -->
+  <div id="section-signup" class="section active">
+    <div class="info-box">
+      <strong><i class="fa fa-info-circle"></i> Team Registration</strong>
+      Enter the secret passphrase to create a new admin account.
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-key"></i> Secret Passphrase</label>
+      <div class="pw-wrap">
+        <input type="password" id="su-secret" placeholder="Enter the team passphrase" autocomplete="off">
+        <button type="button" class="eye-btn" onclick="toggleEye('su-secret','eye-su-secret')">
+          <i id="eye-su-secret" class="fa fa-eye"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-user"></i> Admin Username</label>
+      <input type="text" id="su-username" placeholder="Choose a unique username" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-envelope"></i> Email Address</label>
+      <input type="email" id="su-email" placeholder="your.email@example.com" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-lock"></i> Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="su-password" placeholder="Min 8 · 1 upper · 1 number · 1 symbol" autocomplete="off">
+        <button type="button" class="eye-btn" onclick="toggleEye('su-password','eye-su-pw')">
+          <i id="eye-su-pw" class="fa fa-eye"></i>
+        </button>
+      </div>
+      <div class="hint">Min 8 chars · 1 uppercase · 1 number · 1 special character</div>
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-lock"></i> Confirm Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="su-confirm" placeholder="Repeat your password" autocomplete="off">
+        <button type="button" class="eye-btn" onclick="toggleEye('su-confirm','eye-su-confirm')">
+          <i id="eye-su-confirm" class="fa fa-eye"></i>
+        </button>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="su-btn" onclick="doSignup()">
+      <i class="fa fa-user-plus"></i> Create Admin Account
+    </button>
+    <div class="msg" id="su-msg"></div>
+  </div>
+
+  <!-- ── Section: Admin Login ── -->
+  <div id="section-login" class="section">
+    <div class="info-box">
+      <strong><i class="fa fa-shield-alt"></i> Admin Authentication</strong>
+      Log in with your admin credentials to access the management dashboard.
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-user-shield"></i> Admin Username</label>
+      <input type="text" id="li-username" placeholder="Enter your admin username" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label><i class="fa fa-key"></i> Admin Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="li-password" placeholder="Enter your password" autocomplete="off">
+        <button type="button" class="eye-btn" onclick="toggleEye('li-password','eye-li-pw')">
+          <i id="eye-li-pw" class="fa fa-eye"></i>
+        </button>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="li-btn" onclick="doLogin()">
+      <i class="fa fa-sign-in-alt"></i> Sign In as Admin
+    </button>
+    <div class="msg" id="li-msg"></div>
+  </div>
+
+  <div class="footer">
+    Not an admin? <a href="/signin">Go to User Login</a>
+  </div>
+
+</div><!-- /card -->
+
+<script>
+  /* ── Tab switching ── */
+  function showTab(name) {
+    ['signup','login'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === name);
+      document.getElementById('section-' + t).classList.toggle('active', t === name);
+    });
+    document.getElementById('su-msg').className = 'msg';
+    document.getElementById('li-msg').className = 'msg';
+  }
+
+  /* ── Password visibility toggle ── */
+  function toggleEye(inputId, iconId) {
+    const inp  = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    icon.className = show ? 'fa fa-eye-slash' : 'fa fa-eye';
+  }
+
+  /* ── Show message ── */
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'msg ' + type;
+  }
+
+  /* ── Auto-redirect if already logged in as admin ── */
+  (async function() {
+    try {
+      const r = await fetch('/api/me');
+      const d = await r.json();
+      if (d.authenticated && d.user?.role === 'admin') {
+        window.location.replace('/admin-command-panel');
+      }
+    } catch {}
+  })();
+
+  /* ── Show error from URL param ── */
+  (function() {
+    const err = new URLSearchParams(window.location.search).get('error');
+    if (!err) return;
+    showTab('login');
+    const msgs = { unauthorized: '⛔ Admin access required.', login_required: '🔒 Please log in to continue.' };
+    showMsg('li-msg', msgs[err] || 'Please log in.', 'error');
+  })();
+
+  /* ── Create Admin ── */
+  async function doSignup() {
+    const secret   = document.getElementById('su-secret').value.trim();
+    const username = document.getElementById('su-username').value.trim();
+    const email    = document.getElementById('su-email').value.trim();
+    const password = document.getElementById('su-password').value;
+    const confirm  = document.getElementById('su-confirm').value;
+    const btn      = document.getElementById('su-btn');
+
+    if (!secret)   { showMsg('su-msg', 'Enter the secret passphrase.', 'error'); return; }
+    if (!username) { showMsg('su-msg', 'Enter a username.', 'error'); return; }
+    if (!email)    { showMsg('su-msg', 'Enter an email address.', 'error'); return; }
+    if (!password) { showMsg('su-msg', 'Enter a password.', 'error'); return; }
+    if (password !== confirm) {
+      showMsg('su-msg', `Passwords do not match (${password.length} vs ${confirm.length} chars).`, 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Creating...';
+
+    try {
+      const res  = await fetch('/api/admin-portal/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secretKey: secret, username, email, password, confirm })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showMsg('su-msg', '✅ ' + data.message, 'success');
+        setTimeout(() => {
+          showTab('login');
+          document.getElementById('li-username').value = username;
+          document.getElementById('li-password').focus();
+        }, 1400);
+      } else {
+        showMsg('su-msg', data.message || 'Registration failed.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-user-plus"></i> Create Admin Account';
+      }
+    } catch (err) {
+      showMsg('su-msg', 'Network error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa fa-user-plus"></i> Create Admin Account';
+    }
+  }
+
+  /* ── Admin Login ── */
+  async function doLogin() {
+    const username = document.getElementById('li-username').value.trim();
+    const password = document.getElementById('li-password').value;
+    const btn      = document.getElementById('li-btn');
+
+    if (!username) { showMsg('li-msg', 'Enter your username.', 'error'); return; }
+    if (!password) { showMsg('li-msg', 'Enter your password.', 'error'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Verifying...';
+
+    try {
+      const res  = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        showMsg('li-msg', 'Server returned an invalid response (status ' + res.status + ').', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-sign-in-alt"></i> Sign In as Admin';
+        return;
+      }
+
+      if (data.success) {
+        showMsg('li-msg', '✅ Access granted. Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = data.redirect_to || '/admin-command-panel';
+        }, 1000);
+      } else {
+        showMsg('li-msg', data.message || 'Invalid credentials.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-sign-in-alt"></i> Sign In as Admin';
+      }
+    } catch (err) {
+      showMsg('li-msg', 'Network error: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa fa-sign-in-alt"></i> Sign In as Admin';
+    }
+  }
+
+  /* ── Allow Enter key to submit ── */
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    const loginActive = document.getElementById('section-login').classList.contains('active');
+    if (loginActive) doLogin();
+    else doSignup();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .auth-card { max-width: 520px; }
+
+    .signup-steps { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:28px; }
+    .step-dot {
+      width:28px; height:28px; border-radius:50%;
+      background:var(--slate-200); color:var(--slate-500);
+      font-size:12px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; transition:all 0.3s ease;
+    }
+    .step-dot.active { background:var(--crimson); color:white; box-shadow:0 0 0 4px var(--crimson-pale); }
+    .step-dot.done   { background:var(--success); color:white; }
+    .step-line { flex:1; height:2px; background:var(--slate-200); max-width:60px; }
+    .step-line.done { background:var(--success); }
+
+    .pw-strength { margin-top:6px; }
+    .pw-strength-bar { height:4px; border-radius:4px; background:var(--slate-200); overflow:hidden; margin-bottom:4px; }
+    .pw-strength-fill { height:100%; border-radius:4px; width:0%; transition:width 0.3s ease, background 0.3s ease; }
+    .pw-strength-label { font-size:11px; font-weight:600; color:var(--muted); }
+
+    .blood-pills { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+    .blood-pill {
+      padding:6px 14px; border-radius:20px;
+      border:1.5px solid var(--slate-300); background:var(--white);
+      font-size:13px; font-weight:700; color:var(--slate-600);
+      cursor:pointer; transition:all 0.2s ease; user-select:none;
+    }
+    .blood-pill:hover { border-color:var(--crimson); color:var(--crimson); background:var(--crimson-pale); }
+    .blood-pill.selected { background:var(--crimson); color:white; border-color:var(--crimson); box-shadow:0 2px 8px rgba(155,28,28,0.3); }
+    #su-blood { display:none; }
+
+    .form-section-label {
+      font-size:11px; font-weight:700; text-transform:uppercase;
+      letter-spacing:0.8px; color:var(--teal);
+      margin:20px 0 14px; display:flex; align-items:center; gap:8px;
+    }
+    .form-section-label::after { content:""; flex:1; height:1px; background:var(--teal-soft); }
+
+    /* Phone prefix display */
+    .phone-wrap { position:relative; }
+    .phone-prefix {
+      position:absolute; left:13px; top:50%; transform:translateY(-50%);
+      font-size:14px; font-weight:600; color:var(--slate-600);
+      pointer-events:none; user-select:none;
+    }
+    .phone-wrap input { padding-left:52px !important; }
+
+    /* Inline validation hint */
+    .field-hint { font-size:11px; color:var(--muted); margin-top:4px; }
+    .field-hint.error { color:var(--crimson); }
+    .field-hint.ok    { color:var(--success); }
+  </style>
+</head>
+<body class="auth-body">
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <img src="{{ url_for('static', filename='images/blood.jpg') }}" alt="Logo">
+    <h1>Smart Blood System</h1>
+    <p>Register as a blood donor — save lives</p>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="signup-steps">
+    <div class="step-dot active" id="step1">1</div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-dot" id="step2">2</div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-dot" id="step3">3</div>
+  </div>
+
+  <form onsubmit="handleSignup(event)" id="signup-form">
+
+    <!-- ── Section 1: Personal Details ── -->
+    <div class="form-section-label"><i class="fa fa-id-card"></i> Personal Details</div>
+
+    <!-- Split name fields -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label>First Name <span style="color:#dc2626">*</span></label>
+        <input type="text" id="su-first" placeholder="First" required
+               pattern="[A-Za-z ]+" title="Letters only" oninput="updateStepIndicator()">
+      </div>
+      <div class="form-group">
+        <label>Middle Name</label>
+        <input type="text" id="su-middle" placeholder="Middle"
+               pattern="[A-Za-z ]*" title="Letters only">
+      </div>
+      <div class="form-group">
+        <label>Last Name <span style="color:#dc2626">*</span></label>
+        <input type="text" id="su-last" placeholder="Last" required
+               pattern="[A-Za-z ]+" title="Letters only" oninput="updateStepIndicator()">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Username <span style="color:#dc2626">*</span> <span style="font-size:10px;color:var(--muted)">(no spaces)</span></label>
+        <input type="text" id="su-username" placeholder="e.g. johndoe123" required
+               autocomplete="username" oninput="validateUsername(this)">
+        <div class="field-hint" id="username-hint">Min 3 chars, no spaces</div>
+      </div>
+      <div class="form-group">
+        <label>Email <span style="color:#dc2626">*</span></label>
+        <input type="email" id="su-email" placeholder="you@email.com" required
+               autocomplete="email" oninput="updateStepIndicator()">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phone <span style="color:#dc2626">*</span> <span style="font-size:10px;color:var(--muted)">(+91 format)</span></label>
+        <div class="phone-wrap">
+          <span class="phone-prefix">+91</span>
+          <input type="tel" id="su-phone-digits" placeholder="9XXXXXXXXX"
+                 pattern="[6987]\d{9}" maxlength="10" required
+                 title="Must start with 9, 8, 7, or 6 followed by 9 digits"
+                 oninput="validatePhone(this)">
+        </div>
+        <div class="field-hint" id="phone-hint">Start with 9, 8, 7, or 6 — 10 digits total</div>
+      </div>
+      <div class="form-group">
+        <label>Location <span style="color:#dc2626">*</span> <span style="font-size:10px;color:var(--muted)">(delivery anchor)</span></label>
+        <select id="su-city" required oninput="updateStepIndicator()">
+          <option value="">Select your location</option>
+          <option>Virar</option>
+          <option>Nalasopara</option>
+          <option>Vasai</option>
+          <option>Naigaon</option>
+          <option>Bhayandar</option>
+          <option>Mira Road</option>
+          <option>Dahisar</option>
+          <option>Borivali</option>
+          <option>Kandivali</option>
+          <option>Malad</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── Section 2: Blood Group ── -->
+    <div class="form-section-label"><i class="fa fa-tint"></i> Blood Group</div>
+
+    <div class="form-group">
+      <label>Select Your Blood Group</label>
+      <select id="su-blood" name="blood_group"><option value="">Select</option>
+        <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+        <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+      </select>
+      <div class="blood-pills" id="blood-pills">
+        <div class="blood-pill" onclick="selectBlood('A+')">A+</div>
+        <div class="blood-pill" onclick="selectBlood('A-')">A−</div>
+        <div class="blood-pill" onclick="selectBlood('B+')">B+</div>
+        <div class="blood-pill" onclick="selectBlood('B-')">B−</div>
+        <div class="blood-pill" onclick="selectBlood('O+')">O+</div>
+        <div class="blood-pill" onclick="selectBlood('O-')">O−</div>
+        <div class="blood-pill" onclick="selectBlood('AB+')">AB+</div>
+        <div class="blood-pill" onclick="selectBlood('AB-')">AB−</div>
+      </div>
+    </div>
+
+    <!-- ── Section 3: Security ── -->
+    <div class="form-section-label"><i class="fa fa-lock"></i> Security</div>
+
+    <div class="form-group">
+      <label>Password <span style="color:#dc2626">*</span></label>
+      <div class="pw-wrap">
+        <input type="password" id="su-password" placeholder="Min 8 · 1 upper · 1 number · 1 symbol"
+               required autocomplete="new-password"
+               oninput="checkPasswordStrength(this.value); updateStepIndicator()">
+        <span class="pw-toggle" onclick="togglePw('su-password','su-eye')">
+          <i id="su-eye" class="fa-solid fa-eye"></i>
+        </span>
+      </div>
+      <div class="pw-strength">
+        <div class="pw-strength-bar"><div class="pw-strength-fill" id="pw-fill"></div></div>
+        <span class="pw-strength-label" id="pw-label">Enter a password</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Confirm Password <span style="color:#dc2626">*</span></label>
+      <div class="pw-wrap">
+        <input type="password" id="su-confirm" placeholder="Repeat password"
+               required autocomplete="new-password">
+        <span class="pw-toggle" onclick="togglePw('su-confirm','su-eye2')">
+          <i id="su-eye2" class="fa-solid fa-eye"></i>
+        </span>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary" id="signupBtn">
+      <i class="fa fa-user-plus"></i> &nbsp; Create Donor Account
+    </button>
+    <div id="signupMsg" class="msg-box"></div>
+
+  </form>
+
+  <div class="auth-footer">
+    Already have an account? <a href="/signin">Sign In</a>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  function selectBlood(val) {
+    document.getElementById("su-blood").value = val;
+    document.querySelectorAll(".blood-pill").forEach(p => {
+      p.classList.toggle("selected", p.textContent.replace("−","-") === val);
+    });
+    updateStepIndicator();
+  }
+
+  function validateUsername(inp) {
+    const hint = document.getElementById("username-hint");
+    const val  = inp.value;
+    if (val.includes(" ")) {
+      hint.textContent = "✗ Spaces are not allowed";
+      hint.className   = "field-hint error";
+      inp.value = val.replace(/ /g, "");   // strip spaces in real-time
+    } else if (val.length < 3) {
+      hint.textContent = "Min 3 characters";
+      hint.className   = "field-hint";
+    } else {
+      hint.textContent = "✓ Looks good";
+      hint.className   = "field-hint ok";
+    }
+    updateStepIndicator();
+  }
+
+  function validatePhone(inp) {
+    const hint = document.getElementById("phone-hint");
+    const val  = inp.value.replace(/\D/g,"");
+    inp.value  = val;   // strip non-digits
+    if (val.length === 10 && /^[6987]/.test(val)) {
+      hint.textContent = "✓ Valid number";
+      hint.className   = "field-hint ok";
+    } else if (val.length > 0 && !/^[6987]/.test(val)) {
+      hint.textContent = "✗ Must start with 9, 8, 7, or 6";
+      hint.className   = "field-hint error";
+    } else {
+      hint.textContent = "Start with 9, 8, 7, or 6 — 10 digits total";
+      hint.className   = "field-hint";
+    }
+  }
+
+  function checkPasswordStrength(pw) {
+    const fill  = document.getElementById("pw-fill");
+    const label = document.getElementById("pw-label");
+    let score = 0;
+    if (pw.length >= 8)                             score++;
+    if (/[A-Z]/.test(pw))                           score++;
+    if (/[0-9]/.test(pw))                           score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pw))         score++;
+    const levels = [
+      { w:"0%",   bg:"var(--slate-200)",    text:"Enter a password" },
+      { w:"25%",  bg:"var(--crimson-light)",text:"Weak" },
+      { w:"50%",  bg:"var(--warning)",      text:"Fair" },
+      { w:"75%",  bg:"var(--info)",         text:"Good" },
+      { w:"100%", bg:"var(--success)",      text:"Strong ✓" },
+    ];
+    const lvl = levels[score] || levels[0];
+    fill.style.width      = lvl.w;
+    fill.style.background = lvl.bg;
+    label.textContent     = lvl.text;
+    label.style.color     = lvl.bg;
+  }
+
+  function updateStepIndicator() {
+    const u  = document.getElementById("su-username")?.value.trim();
+    const e  = document.getElementById("su-email")?.value.trim();
+    const f  = document.getElementById("su-first")?.value.trim();
+    const l  = document.getElementById("su-last")?.value.trim();
+    const bg = document.getElementById("su-blood")?.value;
+    const pw = document.getElementById("su-password")?.value;
+
+    const s1 = document.getElementById("step1");
+    const s2 = document.getElementById("step2");
+    const s3 = document.getElementById("step3");
+    const l1 = document.getElementById("line1");
+    const l2 = document.getElementById("line2");
+
+    if (u && e && f && l) {
+      s1.className = "step-dot done"; s1.innerHTML = "✓";
+      l1.className = "step-line done";
+      s2.className = "step-dot " + (bg ? "done" : "active");
+      if (bg) { s2.innerHTML = "✓"; l2.className = "step-line done"; s3.className = "step-dot " + (pw ? "active" : ""); }
+      else { s2.innerHTML = "2"; }
+    }
+  }
+</script>
+</body>
+</html>

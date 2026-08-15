@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Portal — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="app-body">
+
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood Donation System</span>
+  <div class="nav-user">
+    <i class="fa fa-user-circle"></i>
+    <span id="nav-username">…</span>
+    <span style="font-size:11px;font-weight:700;background:#0d9488;color:#fff;padding:2px 8px;border-radius:20px;margin-left:6px">Receiver</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment" class="active"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/rider"><i class="fa fa-motorcycle"></i> Delivery Partners</a>
+  <a href="/profile"><i class="fa fa-medal"></i> Donor Badges</a>
+  <a href="/eligibility"><i class="fa fa-stethoscope"></i> Eligibility Check</a>
+</nav>
+
+<div class="main">
+
+  <div class="payment-portal-hero">
+    <div style="margin-bottom:12px">
+      <a href="/dashboard" style="display:inline-flex;align-items:center;gap:6px;
+         font-size:13px;font-weight:700;color:#fff;background:rgba(255,255,255,0.15);
+         border:1.5px solid rgba(255,255,255,0.4);border-radius:var(--radius);
+         padding:6px 14px;text-decoration:none;
+         transition:background 0.2s" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+        <i class="fa fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+    <div class="hero-icon">💳</div>
+    <div>
+      <h2>Receiver Payment Portal</h2>
+      <p>Your bill is ready. Review the details below and complete your payment.</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+
+    <!-- Left: Bill Card -->
+    <div>
+      <div id="lookup-status-banner" style="display:none;margin-bottom:16px"></div>
+
+      <div id="bill-loading" style="display:none" class="card">
+        <div class="loading-state" style="padding:32px">
+          <div class="spinner"></div>
+          <p style="margin-top:10px;font-weight:600;color:var(--slate-700)">Loading your bill…</p>
+        </div>
+      </div>
+
+      <div id="bill-card-wrap" style="display:none">
+        <div class="bill-card">
+          <div class="bill-card-header">
+            <h3><i class="fa fa-file-invoice"></i> Bill Summary</h3>
+            <span id="bill-status-badge"></span>
+          </div>
+          <div class="bill-card-body">
+            <div class="bill-line"><span class="bl-label">Receipt No</span><span class="bl-value" id="b-receipt" style="font-family:monospace;font-size:13px"></span></div>
+            <div class="bill-line"><span class="bl-label">Date</span><span class="bl-value" id="b-date"></span></div>
+            <div class="bill-line"><span class="bl-label">Patient Name</span><span class="bl-value" id="b-patient" style="font-weight:700;color:var(--slate-800)"></span></div>
+            <div class="bill-line"><span class="bl-label">Blood Group</span><span class="bl-value" id="b-blood"></span></div>
+            <div class="bill-line"><span class="bl-label">Units / Bags</span><span class="bl-value" id="b-bags"></span></div>
+            <div class="bill-line"><span class="bl-label">Cost per Bag</span><span class="bl-value" id="b-cpb"></span></div>
+            <div class="bill-line"><span class="bl-label">Delivery Fee</span><span class="bl-value" id="b-delivery"></span></div>
+            
+            <!-- Delivery Person Info -->
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb">
+              <h4 style="font-size:13px;color:var(--slate-600);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">
+                <i class="fa fa-user-circle"></i> Delivery Partner
+              </h4>
+              <div class="bill-line"><span class="bl-label">Name</span><span class="bl-value" id="b-rider-name">—</span></div>
+              <div class="bill-line">
+                <span class="bl-label">Phone</span>
+                <span class="bl-value">
+                  <a id="b-rider-phone-link" href="#" style="color:var(--teal-dark);text-decoration:none;font-weight:500">
+                    <i class="fa fa-phone"></i> <span id="b-rider-phone">—</span>
+                  </a>
+                </span>
+              </div>
+            </div>
+            
+            <div class="bill-total-line"><span>Total Due</span><span id="b-total"></span></div>
+
+            <button class="pay-now-btn" id="pay-btn" onclick="payNow()" style="display:none">
+              <i class="fa fa-lock"></i> Pay Now — Secure Payment
+            </button>
+
+            <div id="not-mine-msg" style="display:none;margin-top:14px;text-align:center;
+                 padding:12px;background:#fef3c7;border:1.5px solid #fbbf24;border-radius:var(--radius);
+                 color:#92400e;font-weight:600;font-size:14px">
+              <i class="fa fa-info-circle"></i> This payment belongs to another user. Only they can complete it.
+            </div>
+
+            <div id="already-paid-msg" style="display:none;margin-top:14px;text-align:center;
+                 padding:12px;background:var(--success-pale);border-radius:var(--radius);
+                 color:var(--success);font-weight:600;font-size:14px">
+              <i class="fa fa-check-circle"></i> This bill has already been paid.
+            </div>
+
+            <div id="payment-success" style="display:none" class="payment-success-banner">
+              <span class="ps-icon">✅</span>
+              <div>
+                <strong>Payment Successful!</strong>
+                <div style="font-size:12px;font-weight:400;margin-top:2px">Your transaction has been marked as Paid.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="manual-lookup-card" class="card" style="display:none">
+        <div class="card-header"><h3><i class="fa fa-search"></i> Look Up Your Bill</h3></div>
+        <div class="field-group">
+          <label>Receipt Number</label>
+          <input type="text" id="lookup-receipt" placeholder="e.g. RCP-AB12CD34"
+                 style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <button class="btn btn-red" style="width:100%;justify-content:center" onclick="lookupBill()">
+          <i class="fa fa-search"></i> Find Bill
+        </button>
+        <div id="lookup-msg" class="msg-box" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- Right: My Pending Payments -->
+    <div>
+      <div class="card">
+        <div class="card-header" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff">
+          <h3 style="color:#fff"><i class="fa fa-exclamation-triangle"></i> My Pending Payments</h3>
+          <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4)" onclick="loadMyPendingBills()">
+            <i class="fa fa-sync"></i> Refresh
+          </button>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;padding:0 16px">
+          <strong>⚠️ Action Required:</strong> These are your unpaid transactions. Click to pay now.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Receipt</th><th>Patient</th><th>Blood</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="my-pending-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- All Pending Bills (Read-only for others) -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-header">
+          <h3><i class="fa fa-clock"></i> All Pending Bills</h3>
+          <button class="btn btn-sm btn-outline" onclick="loadPendingBills()"><i class="fa fa-sync"></i> Refresh</button>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">All unpaid transactions (view only for other users).</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Receipt</th><th>Patient</th><th>Blood</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody id="pending-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- All Transactions -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fa fa-history"></i> All Transactions</h3>
+      <button class="btn btn-sm btn-outline" onclick="loadAllTransactions()"><i class="fa fa-sync"></i> Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Receipt No</th><th>Patient</th><th>Blood Group</th><th>Bags</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody id="all-txn-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  const FLASK_RECEIPT = "{{ receipt_no | e }}";
+  let currentReceiptNo = null;
+
+  // ── Bill Lookup ──
+  async function lookupBill(receiptNo) {
+    const receipt = receiptNo || document.getElementById("lookup-receipt")?.value.trim();
+    if (!receipt) { setMsg(document.getElementById("lookup-msg"), "Enter a receipt number", "error"); return; }
+
+    document.getElementById("bill-loading").style.display = "block";
+    document.getElementById("bill-card-wrap").style.display = "none";
+    document.getElementById("manual-lookup-card").style.display = "none";
+
+    try {
+      const res  = await fetch(`/api/payment/bill/${encodeURIComponent(receipt)}`);
+      const data = await res.json();
+      document.getElementById("bill-loading").style.display = "none";
+      if (!data.success) {
+        showBanner(`<i class="fa fa-exclamation-circle"></i> ${data.message}`, "error");
+        document.getElementById("manual-lookup-card").style.display = "block";
+        return;
+      }
+      renderBill(data.bill);
+    } catch {
+      document.getElementById("bill-loading").style.display = "none";
+      showBanner("Failed to load bill. Please try again.", "error");
+      document.getElementById("manual-lookup-card").style.display = "block";
+    }
+  }
+
+  function renderBill(b) {
+    currentReceiptNo = b.receipt_no;
+    document.getElementById("b-receipt").textContent  = b.receipt_no;
+    document.getElementById("b-date").textContent     = b.date;
+    document.getElementById("b-patient").textContent  = b.patient_name;
+    document.getElementById("b-blood").innerHTML      = `<span class="blood-badge">${b.blood_group}</span>`;
+    document.getElementById("b-bags").textContent     = b.bags;
+    document.getElementById("b-cpb").textContent      = "₹" + b.cost_per_bag.toLocaleString("en-IN");
+    document.getElementById("b-delivery").textContent = "₹" + b.delivery_fee.toLocaleString("en-IN");
+    document.getElementById("b-total").textContent    = "₹" + b.total.toLocaleString("en-IN");
+    
+    // ── Display rider info ──
+    document.getElementById("b-rider-name").textContent = b.rider_name || "—";
+    document.getElementById("b-rider-phone").textContent = b.rider_phone || "—";
+    
+    // ── Make phone clickable if available ──
+    const phoneLink = document.getElementById("b-rider-phone-link");
+    if (b.rider_phone && b.rider_phone !== "—") {
+      const cleanPhone = b.rider_phone.replace(/\D/g, "");
+      phoneLink.href = `tel:+91${cleanPhone}`;
+      phoneLink.style.cursor = "pointer";
+    } else {
+      phoneLink.href = "#";
+      phoneLink.style.cursor = "default";
+    }
+    document.getElementById("bill-status-badge").innerHTML = `<span class="badge badge-${b.status}">${b.status.toUpperCase()}</span>`;
+
+    const payBtn      = document.getElementById("pay-btn");
+    const alreadyPaid = document.getElementById("already-paid-msg");
+    const notMineMsg  = document.getElementById("not-mine-msg");
+    const successDiv  = document.getElementById("payment-success");
+
+    if (b.status === "paid") {
+      payBtn.style.display      = "none";
+      alreadyPaid.style.display = "block";
+      notMineMsg.style.display  = "none";
+      successDiv.style.display  = "flex";
+    } else if (b.no_owner) {
+      // This bill has no owner (user_id = NULL) - legacy transaction
+      payBtn.style.display      = "none";
+      alreadyPaid.style.display = "none";
+      notMineMsg.innerHTML      = '<i class="fa fa-exclamation-triangle"></i> This transaction has no owner assigned. Please contact administrator.';
+      notMineMsg.style.background = "#fef3c7";
+      notMineMsg.style.border = "1.5px solid #f59e0b";
+      notMineMsg.style.color = "#92400e";
+      notMineMsg.style.display  = "block";
+      successDiv.style.display  = "none";
+    } else if (!b.is_mine) {
+      // This bill belongs to another user
+      payBtn.style.display      = "none";
+      alreadyPaid.style.display = "none";
+      notMineMsg.innerHTML      = '<i class="fa fa-info-circle"></i> This payment belongs to another user. Only they can complete it.';
+      notMineMsg.style.background = "#fef3c7";
+      notMineMsg.style.border = "1.5px solid #fbbf24";
+      notMineMsg.style.color = "#92400e";
+      notMineMsg.style.display  = "block";
+      successDiv.style.display  = "none";
+    } else {
+      // This is the user's own pending bill
+      payBtn.style.display      = "flex";
+      payBtn.innerHTML = `<i class="fa fa-lock"></i> Pay Now — ₹${b.total.toLocaleString("en-IN")}`;
+      alreadyPaid.style.display = "none";
+      notMineMsg.style.display  = "none";
+      successDiv.style.display  = "none";
+    }
+
+    document.getElementById("bill-card-wrap").style.display = "block";
+    document.getElementById("bill-loading").style.display   = "none";
+    document.getElementById("manual-lookup-card").style.display = "none";
+    document.getElementById("bill-card-wrap").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // ── Pay Now ──
+  async function payNow() {
+    if (!currentReceiptNo) return;
+    const btn = document.getElementById("pay-btn");
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Processing Payment…`;
+
+    try {
+      const res  = await fetch("/api/payment/pay", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receipt_no: currentReceiptNo })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        const txn = data.transaction;
+        document.getElementById("bill-status-badge").innerHTML = `<span class="badge badge-paid">PAID</span>`;
+        btn.style.display = "none";
+        document.getElementById("already-paid-msg").style.display = "none";
+        document.getElementById("not-mine-msg").style.display = "none";
+        const successDiv = document.getElementById("payment-success");
+        successDiv.style.display = "flex";
+        successDiv.innerHTML = `
+          <span class="ps-icon">✅</span>
+          <div>
+            <strong>Payment Successful!</strong>
+            <div style="font-size:12px;font-weight:400;margin-top:2px">
+              ${txn.receipt_no} · ${txn.patient_name} ·
+              <span class="blood-badge" style="font-size:10px">${txn.blood_group}</span>
+              · ₹${txn.total.toLocaleString("en-IN")} · PAID
+            </div>
+          </div>`;
+
+        showToast(data.message, "success");
+        loadMyPendingBills();  // Reload user's own pending bills
+        loadPendingBills();     // Reload all pending bills
+        loadAllTransactions();
+        if (typeof loadDashboardStats === "function") loadDashboardStats();
+        if (typeof loadTransactions   === "function") loadTransactions();
+
+        // ── Redirect to Rider page after 3 seconds ──
+        const redirectBanner = document.createElement("div");
+        redirectBanner.style.cssText = `
+          margin-top:12px;padding:10px 14px;background:var(--teal-pale);
+          border:1.5px solid var(--teal-soft);border-radius:var(--radius);
+          font-size:13px;color:var(--teal-dark);font-weight:600;text-align:center`;
+        redirectBanner.innerHTML = `
+          <i class="fa fa-motorcycle"></i>
+          Redirecting to Delivery Tracker in <strong id="rider-countdown">3</strong>s…
+          <a href="/rider" style="color:var(--teal-dark);text-decoration:underline;margin-left:6px">Go now →</a>`;
+        successDiv.parentNode.appendChild(redirectBanner);
+
+        let secs = 3;
+        const iv = setInterval(() => {
+          secs--;
+          const el = document.getElementById("rider-countdown");
+          if (el) el.textContent = secs;
+          if (secs <= 0) { clearInterval(iv); window.location.href = "/rider"; }
+        }, 1000);
+
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa fa-lock"></i> Pay Now — ₹${document.getElementById("b-total").textContent}`;
+        showToast(data.message, "error");
+      }
+    } catch {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-lock"></i> Pay Now`;
+      showToast("Payment failed. Try again.", "error");
+    }
+  }
+
+  // ── My Pending Bills (User's Own) ──
+  async function loadMyPendingBills() {
+    const tbody = document.getElementById("my-pending-tbody");
+    try {
+      const res  = await fetch("/api/payment/my-pending");
+      const data = await res.json();
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--success);padding:20px;font-weight:600">
+          <i class="fa fa-check-circle"></i> All payments completed! 🎉
+        </td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(t => `
+        <tr class="txn-row-pending" style="cursor:pointer;background:#fef2f2" onclick="lookupBill('${t.receipt_no}')">
+          <td><code style="font-size:12px;font-weight:700">${t.receipt_no}</code></td>
+          <td style="font-weight:600">${t.patient_name}</td>
+          <td><span class="blood-badge">${t.blood_group}</span></td>
+          <td style="font-weight:700;color:#dc2626">₹${t.total.toLocaleString("en-IN")}</td>
+          <td><span class="badge badge-${t.status}">${t.status}</span></td>
+        </tr>`).join("");
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--crimson);text-align:center;padding:16px">Failed to load</td></tr>`;
+    }
+  }
+
+  // ── Pending Bills (All users, read-only for others) ──
+  async function loadPendingBills() {
+    const tbody = document.getElementById("pending-tbody");
+    try {
+      const res  = await fetch("/api/payment/pending");
+      const data = await res.json();
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No pending bills 🎉</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(t => {
+        const rowStyle = t.is_mine ? 'cursor:pointer;background:#fef2f2;font-weight:600' : 'cursor:pointer';
+        const ownerBadge = t.is_mine ? '<span style="font-size:9px;background:#dc2626;color:#fff;padding:2px 6px;border-radius:4px;margin-left:4px">YOURS</span>' : '';
+        return `
+          <tr class="txn-row-pending" style="${rowStyle}" onclick="lookupBill('${t.receipt_no}')">
+            <td><code style="font-size:12px">${t.receipt_no}</code>${ownerBadge}</td>
+            <td>${t.patient_name}</td>
+            <td><span class="blood-badge">${t.blood_group}</span></td>
+            <td>₹${t.total.toLocaleString("en-IN")}</td>
+            <td><span class="badge badge-${t.status}">${t.status}</span></td>
+          </tr>`;
+      }).join("");
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="5" style="color:var(--crimson);text-align:center;padding:16px">Failed to load</td></tr>`;
+    }
+  }
+
+  // ── All Transactions ──
+  async function loadAllTransactions() {
+    const tbody = document.getElementById("all-txn-tbody");
+    try {
+      const res  = await fetch("/api/finance/transactions");
+      const data = await res.json();
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No transactions yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map(t => `
+        <tr style="cursor:pointer" onclick="lookupBill('${t.receipt_no}')">
+          <td><code style="font-size:12px">${t.receipt_no}</code></td>
+          <td>${t.patient_name}</td>
+          <td><span class="blood-badge">${t.blood_group}</span></td>
+          <td>${t.bags}</td>
+          <td>₹${t.total.toLocaleString("en-IN")}</td>
+          <td><span class="badge badge-${t.status}">${t.status}</span></td>
+          <td>${t.date}</td>
+        </tr>`).join("");
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="7" style="color:var(--crimson);text-align:center;padding:16px">Failed to load</td></tr>`;
+    }
+  }
+
+  // ── Banner helper ──
+  function showBanner(html, type) {
+    const el = document.getElementById("lookup-status-banner");
+    if (!el) return;
+    const colors = {
+      success: { bg:"var(--success-pale)", border:"#6ee7b7",              color:"var(--success)" },
+      error:   { bg:"var(--crimson-pale)", border:"var(--crimson-soft)",   color:"var(--crimson)" },
+      info:    { bg:"var(--teal-pale)",    border:"var(--teal-soft)",      color:"var(--teal-dark)" }
+    };
+    const c = colors[type] || colors.info;
+    el.style.cssText = `display:block;padding:12px 16px;border-radius:var(--radius);
+      background:${c.bg};border:1.5px solid ${c.border};color:${c.color};font-size:13px;font-weight:600`;
+    el.innerHTML = html;
+  }
+
+  // ── Auto-handshake on page load ──
+  document.addEventListener("DOMContentLoaded", () => {
+    loadMyPendingBills();   // Load user's own pending bills first
+    loadPendingBills();      // Load all pending bills
+    loadAllTransactions();
+
+    const jsReceipt = new URLSearchParams(window.location.search).get("receipt") || "";
+    const receipt   = (FLASK_RECEIPT || jsReceipt || "").trim().toUpperCase();
+
+    if (receipt) {
+      showBanner(`<i class="fa fa-bolt"></i> Auto-loading bill for receipt <strong>${receipt}</strong>…`, "info");
+      document.getElementById("bill-loading").style.display = "block";
+      setTimeout(() => lookupBill(receipt), 300);
+    } else {
+      document.getElementById("manual-lookup-card").style.display = "block";
+    }
+  });
+
+  // ── Load logged-in user name into navbar (separate async IIFE) ──
+  (async function loadNavUser() {
+    try {
+      let user = JSON.parse(sessionStorage.getItem("sbdms_user") || "null");
+      if (!user) {
+        const res  = await fetch("/api/me");
+        const data = await res.json();
+        if (data.authenticated) user = data.user;
+      }
+      const el = document.getElementById("nav-username");
+      if (el && user) el.textContent = user.first_name || user.full_name || user.username;
+    } catch {}
+  })();
+</script>
+</body>
+</html>

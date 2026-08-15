@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ── Admin Login — Deep Crimson / Slate aesthetic ── */
+    .admin-login-body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--crimson-dark) 0%, var(--slate-900) 60%, #1a0a0a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .admin-login-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 44px 40px 36px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Crimson accent bar at top */
+    .admin-login-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, var(--crimson-dark), var(--crimson-light), var(--crimson-dark));
+    }
+
+    .admin-login-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .admin-shield-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--crimson-dark), var(--crimson-light));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 24px rgba(155,28,28,0.35);
+    }
+
+    .admin-shield-icon i {
+      font-size: 30px;
+      color: white;
+    }
+
+    .admin-login-logo h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--slate-800);
+      margin-bottom: 4px;
+    }
+
+    .admin-login-logo p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Restricted access badge */
+    .restricted-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--crimson-pale);
+      border: 1.5px solid var(--crimson-soft);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--crimson);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 10px;
+    }
+
+    .admin-form-group {
+      margin-bottom: 18px;
+    }
+
+    .admin-form-group label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--slate-600);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 7px;
+    }
+
+    .admin-form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid var(--slate-200);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--slate-800);
+      background: var(--slate-50);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .admin-form-group input:focus {
+      border-color: var(--crimson);
+      background: var(--white);
+      box-shadow: 0 0 0 3px rgba(155,28,28,0.10);
+    }
+
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 44px; }
+    .pw-toggle {
+      position: absolute;
+      right: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--slate-400);
+      font-size: 15px;
+      transition: color 0.2s;
+    }
+    .pw-toggle:hover { color: var(--crimson); }
+
+    .admin-login-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--crimson-dark), var(--crimson-light));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(155,28,28,0.30);
+      font-family: 'Inter', sans-serif;
+      margin-top: 8px;
+    }
+
+    .admin-login-btn:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(155,28,28,0.38);
+    }
+
+    .admin-login-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .admin-msg-box {
+      margin-top: 14px;
+      padding: 11px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      display: none;
+    }
+
+    .admin-msg-box.error {
+      display: block;
+      background: var(--crimson-pale);
+      border: 1.5px solid var(--crimson-soft);
+      color: var(--crimson);
+    }
+
+    .admin-msg-box.success {
+      display: block;
+      background: var(--success-pale);
+      border: 1.5px solid #a7f3d0;
+      color: var(--success);
+    }
+
+    .admin-footer-link {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .admin-footer-link a {
+      color: var(--crimson);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .admin-footer-link a:hover { text-decoration: underline; }
+
+    /* Security notice strip */
+    .security-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 10px 13px;
+      margin-top: 20px;
+      font-size: 11.5px;
+      color: var(--slate-500);
+    }
+
+    .security-notice i { color: var(--slate-400); flex-shrink: 0; }
+  </style>
+</head>
+<body class="admin-login-body">
+
+<div class="admin-login-card">
+
+  <div class="admin-login-logo">
+    <div class="admin-shield-icon">
+      <i class="fa fa-shield-alt"></i>
+    </div>
+    <h1>Admin Access</h1>
+    <p>Smart Blood Donation Management System</p>
+    <div class="restricted-badge">
+      <i class="fa fa-lock"></i> Restricted Area
+    </div>
+  </div>
+
+  <!-- Error banner injected by Flask or JS -->
+  {% if error %}
+  <div class="admin-msg-box error" style="display:block;margin-bottom:18px">
+    {% if error == 'unauthorized' %}
+      ⛔ Unauthorized access. Admin credentials required.
+    {% elif error == 'invalid' %}
+      ❌ Invalid admin username or password.
+    {% elif error == 'login_required' %}
+      🔒 Session expired. Please log in again.
+    {% else %}
+      ⚠️ Access denied.
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <form id="admin-login-form" onsubmit="handleAdminLogin(event)">
+
+    <div class="admin-form-group">
+      <label><i class="fa fa-user-shield" style="margin-right:5px"></i>Admin Username</label>
+      <input type="text" id="adm-username"
+             placeholder="Enter admin username"
+             autocomplete="username"
+             required>
+    </div>
+
+    <div class="admin-form-group">
+      <label><i class="fa fa-key" style="margin-right:5px"></i>Admin Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="adm-password"
+               placeholder="Enter admin password"
+               autocomplete="current-password"
+               required>
+        <span class="pw-toggle" onclick="toggleAdminPw()">
+          <i id="adm-eye" class="fa-solid fa-eye"></i>
+        </span>
+      </div>
+    </div>
+
+    <button type="submit" class="admin-login-btn" id="adm-login-btn">
+      <i class="fa fa-sign-in-alt"></i> Sign In as Admin
+    </button>
+
+    <div class="admin-msg-box" id="adm-msg"></div>
+
+  </form>
+
+  <div class="security-notice">
+    <i class="fa fa-info-circle"></i>
+    Session expires automatically when the browser is closed.
+    All admin actions are logged.
+  </div>
+
+  <div class="admin-footer-link">
+    Not an admin? <a href="/signin">Go to User Login</a>
+  </div>
+
+</div><!-- /admin-login-card -->
+
+<script>
+  function toggleAdminPw() {
+    const inp  = document.getElementById("adm-password");
+    const icon = document.getElementById("adm-eye");
+    if (inp.type === "password") {
+      inp.type = "text";
+      icon.classList.replace("fa-eye", "fa-eye-slash");
+    } else {
+      inp.type = "password";
+      icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+  }
+
+  function showAdminMsg(text, type) {
+    const el = document.getElementById("adm-msg");
+    el.textContent = text;
+    el.className   = "admin-msg-box " + type;
+  }
+
+  async function handleAdminLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById("adm-username").value.trim();
+    const password = document.getElementById("adm-password").value;
+    const btn      = document.getElementById("adm-login-btn");
+
+    if (!username || !password) {
+      showAdminMsg("Please enter both username and password.", "error");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Verifying…`;
+
+    try {
+      const res  = await fetch("/api/admin/login", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showAdminMsg("✅ Access granted. Redirecting to Admin Panel…", "success");
+        setTimeout(() => window.location.href = "/admin", 1200);
+      } else {
+        showAdminMsg(data.message || "Invalid credentials.", "error");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa fa-sign-in-alt"></i> Sign In as Admin`;
+      }
+    } catch {
+      showAdminMsg("Network error. Please try again.", "error");
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-sign-in-alt"></i> Sign In as Admin`;
+    }
+  }
+</script>
+</body>
+</html>

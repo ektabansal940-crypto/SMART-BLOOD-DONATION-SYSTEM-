@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donor Badges — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="app-body">
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood Donation System</span>
+  <div class="nav-user">
+    <i class="fa fa-user-circle"></i>
+    <span id="nav-username">…</span>
+    <span style="font-size:11px;font-weight:700;background:#dc2626;color:#fff;padding:2px 8px;border-radius:20px;margin-left:6px">Donate</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/profile" class="active"><i class="fa fa-medal"></i> Donor Badges</a>
+  <a href="/eligibility"><i class="fa fa-stethoscope"></i> Eligibility Check</a>
+</nav>
+
+<div class="main">
+  <div class="page-title">
+    <a href="/dashboard" style="display:inline-flex;align-items:center;gap:6px;
+       font-size:13px;font-weight:700;color:var(--crimson);background:var(--crimson-pale);
+       border:1.5px solid var(--crimson-soft);border-radius:var(--radius);
+       padding:6px 14px;text-decoration:none;margin-bottom:10px;
+       transition:background 0.2s" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--crimson-pale)'">
+      <i class="fa fa-arrow-left"></i> Back to Dashboard
+    </a>
+    <div><i class="fa fa-medal"></i> Donor Badge Case</div>
+  </div>
+
+  <!-- Donor selector -->
+  <div class="card" style="margin-bottom:22px">
+    <div class="card-header">
+      <h3><i class="fa fa-user-circle"></i> Select Donor Profile</h3>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:12px;font-weight:700;color:var(--slate-600);text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:6px">Donor</label>
+        <select id="donor-select" style="width:100%;padding:10px 13px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:14px;outline:none;background:white">
+          <option value="">— Select a donor —</option>
+        </select>
+      </div>
+      <button class="btn btn-red" onclick="loadProfile()">
+        <i class="fa fa-trophy"></i> View Badges
+      </button>
+    </div>
+  </div>
+
+  <!-- Profile + Badge display -->
+  <div id="profile-display" style="display:none">
+
+    <!-- Donor info card -->
+    <div class="card" id="donor-info-card" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:22px">
+      <div id="donor-avatar" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--crimson-dark),var(--crimson-light));display:flex;align-items:center;justify-content:center;color:white;font-size:26px;font-weight:800;flex-shrink:0"></div>
+      <div style="flex:1">
+        <h3 id="d-name" style="font-size:20px;font-weight:800;color:var(--slate-800)"></h3>
+        <p id="d-meta" style="font-size:13px;color:var(--muted);margin-top:3px"></p>
+      </div>
+      <div style="text-align:center">
+        <div id="d-donations" style="font-size:36px;font-weight:800;color:var(--crimson);line-height:1"></div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-top:4px">Donations</div>
+      </div>
+      <div id="d-highest-badge" style="font-size:48px;flex-shrink:0"></div>
+      <!-- Certificate button -->
+      <div id="cert-btn-wrap" style="display:none">
+        <button class="btn btn-teal" onclick="viewCertificate()" id="cert-btn"
+                style="display:flex;align-items:center;gap:8px;font-size:14px;padding:10px 18px">
+          <i class="fa fa-certificate"></i> View My Certificate
+        </button>
+      </div>
+    </div>
+
+    <!-- Donation progress -->
+    <div class="donation-progress-wrap">
+      <h3><i class="fa fa-chart-line"></i> Donation Progress</h3>
+      <div class="dp-track">
+        <div class="dp-fill" id="dp-fill" style="width:0%"></div>
+      </div>
+      <div class="dp-milestones">
+        <span>0</span>
+        <span>1 🥉</span>
+        <span>5 🥈</span>
+        <span>10 🥇</span>
+      </div>
+      <p id="dp-next-label" style="font-size:13px;color:var(--muted);margin-top:10px;text-align:center"></p>
+    </div>
+
+    <!-- Badge Case -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-award"></i> Badge Case</h3>
+        <span id="badge-summary" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <div class="badge-case" id="badge-case"></div>
+    </div>
+
+  </div>
+
+  <!-- All donors leaderboard -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fa fa-list-ol"></i> Donor Leaderboard</h3>
+      <button class="btn btn-sm btn-outline" onclick="loadLeaderboard()"><i class="fa fa-sync"></i> Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Donor</th>
+            <th>Blood Group</th>
+            <th>City</th>
+            <th>Donations</th>
+            <th>Badge</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:20px"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+
+<!-- ── Certificate Modal ── -->
+<div id="cert-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.65);
+     z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:16px;max-width:600px;width:100%;
+              box-shadow:0 24px 64px rgba(0,0,0,0.3);overflow:hidden">
+
+    <!-- Modal header -->
+    <div style="background:linear-gradient(135deg,#9b1c1c,#b91c1c);
+                padding:20px 24px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:#fff;font-size:16px;font-weight:800">
+        <i class="fa fa-certificate"></i> Blood Donation Certificate
+      </span>
+      <button onclick="closeCertModal()"
+              style="background:rgba(255,255,255,0.2);border:none;color:#fff;
+                     border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px">
+        ✕ Close
+      </button>
+    </div>
+
+    <!-- Certificate body (printable) -->
+    <div id="cert-content" style="padding:32px 36px;text-align:center">
+      <div style="border:3px solid #9b1c1c;border-radius:12px;padding:32px 28px;
+                  background:linear-gradient(135deg,#fff5f5,#fff)">
+
+        <!-- Header -->
+        <div style="font-size:32px;margin-bottom:8px">🩸</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:2px;color:#9b1c1c;margin-bottom:4px">
+          Smart Blood Donation Management System
+        </div>
+        <div style="font-size:22px;font-weight:800;color:#1e293b;margin:10px 0 4px">
+          Certificate of Appreciation
+        </div>
+        <div style="height:2px;background:linear-gradient(90deg,transparent,#9b1c1c,transparent);
+                    margin:12px auto;width:80%"></div>
+
+        <!-- Body text -->
+        <p style="font-size:14px;color:#475569;margin:16px 0 6px">
+          This is to certify that
+        </p>
+        <div id="cert-donor-name"
+             style="font-size:28px;font-weight:800;color:#9b1c1c;margin:4px 0 8px;
+                    font-style:italic"></div>
+        <p style="font-size:14px;color:#475569;line-height:1.8;margin:0">
+          has voluntarily donated blood
+          <strong id="cert-donations" style="color:#1e293b;font-size:16px"></strong> time(s)<br>
+          Blood Group: <strong id="cert-blood" style="color:#9b1c1c;font-size:16px"></strong> &nbsp;·&nbsp;
+          City: <strong id="cert-city" style="color:#1e293b"></strong>
+        </p>
+
+        <!-- Divider -->
+        <div style="height:1px;background:#e2e8f0;margin:20px auto;width:90%"></div>
+
+        <!-- Footer info -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;
+                    font-size:12px;color:#64748b;flex-wrap:wrap;gap:8px;margin-top:4px">
+          <div style="text-align:left">
+            <div style="font-weight:700;color:#1e293b;font-size:13px">Certificate No.</div>
+            <div id="cert-no" style="font-family:monospace;color:#9b1c1c;font-weight:700"></div>
+          </div>
+          <div style="font-size:40px">🏅</div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:#1e293b;font-size:13px">Issued On</div>
+            <div id="cert-date"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;font-size:11px;color:#94a3b8;font-style:italic">
+          "Every drop counts — thank you for saving lives."
+        </div>
+      </div>
+    </div>
+
+    <!-- Print button -->
+    <div style="padding:16px 24px;border-top:1px solid #f1f5f9;text-align:center;
+                display:flex;gap:10px;justify-content:center">
+      <button onclick="printCertificate()"
+              style="background:#9b1c1c;color:#fff;border:none;border-radius:8px;
+                     padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;
+                     display:flex;align-items:center;gap:8px">
+        <i class="fa fa-print"></i> Print / Save as PDF
+      </button>
+      <button onclick="closeCertModal()"
+              style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;
+                     padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer">
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  // Populate donor dropdown
+  async function populateDonorSelect() {
+    try {
+      const res  = await fetch("/api/donors");
+      const data = await res.json();
+      const sel  = document.getElementById("donor-select");
+      data.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.id;
+        opt.textContent = `${d.name} (${d.blood_group}) — ${d.donations} donation(s)`;
+        sel.appendChild(opt);
+      });
+    } catch { console.error("Failed to load donors"); }
+  }
+
+  async function loadProfile() {
+    const id = document.getElementById("donor-select").value;
+    if (!id) { showToast("Select a donor first", "warning"); return; }
+
+    try {
+      const res  = await fetch(`/api/profile/${id}`);
+      const data = await res.json();
+      renderProfile(data);
+    } catch { showToast("Failed to load profile", "error"); }
+  }
+
+  function renderProfile(data) {
+    const donor = data.donor;
+    document.getElementById("profile-display").style.display = "block";
+
+    // Store current donor id for certificate fetch
+    _currentDonorId = donor.id;
+
+    // Donor info
+    document.getElementById("donor-avatar").textContent = donor.name.charAt(0);
+    document.getElementById("d-name").textContent = donor.name;
+    document.getElementById("d-meta").textContent =
+      `${donor.blood_group} · ${donor.city} · ${donor.phone || "—"} · ${donor.is_available ? "Available" : "Unavailable"}`;
+    document.getElementById("d-donations").textContent = donor.donations;
+
+    // Highest badge emoji
+    const highestEarned = data.earned_badges.slice(-1)[0];
+    document.getElementById("d-highest-badge").textContent = highestEarned ? highestEarned.medal : "—";
+
+    // ── Show/hide certificate button based on unlock status ──
+    const certWrap = document.getElementById("cert-btn-wrap");
+    fetch(`/api/donation/check/${donor.id}`)
+      .then(r => r.json())
+      .then(d => {
+        if (certWrap) certWrap.style.display = d.has_completed ? "block" : "none";
+      })
+      .catch(() => { if (certWrap) certWrap.style.display = "none"; });
+
+    // Progress bar
+    setTimeout(() => {
+      document.getElementById("dp-fill").style.width = data.progress_pct + "%";
+    }, 100);
+
+    // Next badge label
+    const nextLabel = document.getElementById("dp-next-label");
+    if (data.next_badge) {
+      const remaining = data.next_badge.required - donor.donations;
+      nextLabel.innerHTML = `<strong>${remaining} more donation(s)</strong> to earn <strong>${data.next_badge.medal} ${data.next_badge.name}</strong>`;
+    } else {
+      nextLabel.innerHTML = `<strong style="color:var(--success)">🎉 All badges earned! You are a Guardian Angel.</strong>`;
+    }
+
+    // Badge summary
+    document.getElementById("badge-summary").textContent =
+      `${data.earned_badges.length} / ${data.badges.length} earned`;
+
+    // Badge case
+    const caseEl = document.getElementById("badge-case");
+    caseEl.innerHTML = data.badges.map(b => {
+      const earned = donor.donations >= b.required;
+      return `
+        <div class="badge-item ${b.tier} ${earned ? "earned" : "locked"}">
+          <span class="badge-medal">${b.medal}</span>
+          <h4>${b.name}</h4>
+          <p class="badge-req">${b.description}</p>
+          <p class="badge-req" style="margin-top:6px;font-weight:700">
+            Requires ${b.required} donation${b.required > 1 ? "s" : ""}
+          </p>
+          <span class="badge-earned-label">${earned ? "✓ Earned" : `${Math.max(0, b.required - donor.donations)} to go`}</span>
+        </div>`;
+    }).join("");
+
+    document.getElementById("profile-display").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function loadLeaderboard() {
+    const tbody = document.getElementById("leaderboard-tbody");
+    try {
+      const res  = await fetch("/api/profile/all");
+      const data = await res.json();
+      if (!data.length) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No donors found</td></tr>`; return; }
+      tbody.innerHTML = data.map((d, i) => `
+        <tr style="cursor:pointer" onclick="selectAndLoad(${d.id})">
+          <td><strong style="color:var(--muted)">#${i+1}</strong></td>
+          <td><strong>${d.name}</strong></td>
+          <td><span class="blood-badge">${d.blood_group}</span></td>
+          <td>${d.city}</td>
+          <td><strong style="color:var(--crimson)">${d.donations}</strong></td>
+          <td style="font-size:22px">${d.badge_medal}</td>
+          <td><span class="badge ${d.is_available ? "badge-available" : "badge-unavailable"}">${d.is_available ? "Available" : "Unavailable"}</span></td>
+        </tr>`).join("");
+    } catch { tbody.innerHTML = `<tr><td colspan="7" style="color:var(--crimson);text-align:center;padding:16px">Failed to load</td></tr>`; }
+  }
+
+  function selectAndLoad(donorId) {
+    document.getElementById("donor-select").value = donorId;
+    loadProfile();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    populateDonorSelect();
+    loadLeaderboard();
+
+    // ── Load logged-in user name into navbar & auto-select their donor ──
+    (async function loadNavUser() {
+      try {
+        let user = JSON.parse(sessionStorage.getItem("sbdms_user") || "null");
+        if (!user) {
+          const res  = await fetch("/api/me");
+          const data = await res.json();
+          if (data.authenticated) user = data.user;
+        }
+        const el = document.getElementById("nav-username");
+        if (el && user) el.textContent = user.first_name || user.full_name || user.username;
+
+        // Auto-select the logged-in user's own donor record by donor_id
+        if (user?.donor_id) {
+          // Wait for donor select to be populated
+          await new Promise(r => setTimeout(r, 400));
+          const sel = document.getElementById("donor-select");
+          if (sel) {
+            sel.value = user.donor_id;
+            if (sel.value) loadProfile();
+          }
+        }
+      } catch {}
+    })();
+  });
+
+  // Current donor id being viewed
+  let _currentDonorId = null;
+
+  async function viewCertificate() {
+    if (!_currentDonorId) return;
+    try {
+      const res  = await fetch(`/api/certificate/${_currentDonorId}`);
+      const data = await res.json();
+      if (!data.success) {
+        showToast(data.message || "Certificate locked.", "warning");
+        return;
+      }
+      // Populate modal
+      document.getElementById("cert-donor-name").textContent = data.donor_name;
+      document.getElementById("cert-donations").textContent  = data.donations;
+      document.getElementById("cert-blood").textContent      = data.blood_group;
+      document.getElementById("cert-city").textContent       = data.city;
+      document.getElementById("cert-no").textContent         = data.certificate_no;
+      document.getElementById("cert-date").textContent       = data.issued_date;
+      // Show modal
+      const modal = document.getElementById("cert-modal");
+      modal.style.display = "flex";
+      document.body.style.overflow = "hidden";
+    } catch {
+      showToast("Failed to load certificate.", "error");
+    }
+  }
+
+  function closeCertModal() {
+    document.getElementById("cert-modal").style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  function printCertificate() {
+    const content = document.getElementById("cert-content").innerHTML;
+    const w = window.open("", "_blank", "width=700,height=550");
+    w.document.write(`
+      <!DOCTYPE html><html><head>
+        <title>Blood Donation Certificate</title>
+        <style>
+          body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background:#fff; }
+          @media print { body { padding: 0; } button { display:none; } }
+        </style>
+      </head><body>${content}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  }
+
+  // Close modal on backdrop click
+  document.getElementById("cert-modal").addEventListener("click", function(e) {
+    if (e.target === this) closeCertModal();
+  });
+</script>
+</body>
+</html>

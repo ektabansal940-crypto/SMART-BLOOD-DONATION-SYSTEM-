@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ── OTP / Recovery inline styles ── */
+    .recovery-step { display: none; animation: slideUp 0.35s ease; }
+    .recovery-step.active { display: block; }
+
+    .method-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .method-card {
+      border: 2px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 18px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      background: var(--white);
+    }
+
+    .method-card:hover {
+      border-color: var(--crimson);
+      background: var(--crimson-pale);
+      transform: translateY(-2px);
+    }
+
+    .method-card.selected {
+      border-color: var(--crimson);
+      background: var(--crimson-pale);
+      box-shadow: 0 0 0 3px rgba(155,28,28,0.12);
+    }
+
+    .method-card .mc-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .method-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin-bottom: 3px;
+    }
+
+    .method-card p {
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    /* OTP digit boxes */
+    .otp-boxes {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .otp-box {
+      width: 48px;
+      height: 56px;
+      border: 2px solid var(--slate-300);
+      border-radius: var(--radius);
+      text-align: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--crimson);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: var(--white);
+    }
+
+    .otp-box:focus {
+      border-color: var(--crimson);
+      box-shadow: 0 0 0 3px rgba(155,28,28,0.12);
+    }
+
+    /* Countdown timer */
+    .otp-timer {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .otp-timer .timer-val {
+      font-weight: 800;
+      color: var(--crimson);
+      font-size: 15px;
+    }
+
+    .otp-timer .timer-val.expired { color: var(--warning); }
+
+    /* Demo OTP badge */
+    .otp-demo-badge {
+      background: var(--teal-pale);
+      border: 1.5px solid var(--teal-soft);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--teal-dark);
+      text-align: center;
+      margin-bottom: 14px;
+      font-weight: 600;
+    }
+
+    /* Step breadcrumb */
+    .recovery-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .recovery-breadcrumb .rb-step {
+      font-weight: 600;
+      color: var(--crimson);
+    }
+
+    .recovery-breadcrumb .rb-sep { color: var(--slate-300); }
+
+    /* Back link */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--crimson); }
+
+    /* ── Landing layout: features panel + auth card ── */
+    .landing-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Below ~980px: stack auth card centrally on small screens */
+    @media (max-width: 980px) {
+      .landing-wrap { flex-direction: column; gap: 32px; }
+    }
+  </style>
+</head>
+<body class="auth-body">
+
+<div class="landing-wrap">
+
+
+<div class="auth-card" style="max-width:400px">
+
+  <!-- ══════════════════════════════════
+       STEP 0 — Landing / Portal Choice
+  ══════════════════════════════════ -->
+  <div id="step-landing" class="recovery-step active">
+
+    <div class="auth-logo">
+      <img src="{{ url_for('static', filename='images/blood.jpg') }}" alt="Logo">
+      <h1>Smart Blood System</h1>
+      <p>Emergency Blood Management Portal</p>
+    </div>
+
+    <div style="margin:8px 0 24px;text-align:center;font-size:13px;color:var(--muted)">
+      Select your login option
+    </div>
+
+    <!-- Portal choice buttons -->
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+
+      <!-- User Portal — crimson red -->
+      <button
+        onclick="showStep('step-login')"
+        style="width:100%;display:flex;align-items:center;justify-content:center;gap:14px;
+               padding:18px 20px;
+               background:linear-gradient(135deg,#9b1c1c,#b91c1c);
+               color:#fff;border:none;border-radius:14px;
+               font-family:inherit;cursor:pointer;
+               box-shadow:0 4px 18px rgba(155,28,28,0.35);
+               transition:opacity 0.2s,transform 0.15s"
+        onmouseover="this.style.opacity='0.9';this.style.transform='translateY(-2px)'"
+        onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
+        <i class="fa fa-user-circle" style="font-size:22px;flex-shrink:0"></i>
+        <span style="text-align:left">
+          <strong style="display:block;font-size:16px;font-weight:800;letter-spacing:0.2px">Login as User</strong>
+          <small style="font-weight:400;opacity:0.88;font-size:12px">Donate blood, track requests &amp; more</small>
+        </span>
+      </button>
+
+      <!-- Admin Portal — dark navy -->
+      <a href="/admin-entry" style="text-decoration:none;display:block">
+        <button
+          type="button"
+          style="width:100%;display:flex;align-items:center;justify-content:center;gap:14px;
+                 padding:18px 20px;
+                 background:linear-gradient(135deg,#1e293b,#0f172a);
+                 color:#fff;border:none;border-radius:14px;
+                 font-family:inherit;cursor:pointer;
+                 box-shadow:0 4px 18px rgba(15,23,42,0.35);
+                 transition:opacity 0.2s,transform 0.15s"
+          onmouseover="this.style.opacity='0.88';this.style.transform='translateY(-2px)'"
+          onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
+          <i class="fa fa-user-shield" style="font-size:22px;flex-shrink:0"></i>
+          <span style="text-align:left">
+            <strong style="display:block;font-size:16px;font-weight:800;letter-spacing:0.2px">Login as Admin</strong>
+            <small style="font-weight:400;opacity:0.75;font-size:12px">System management &amp; administration</small>
+          </span>
+        </button>
+      </a>
+
+    </div>
+
+    <div class="auth-footer">
+      New here? <a href="/signup">Create Account</a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 0b — User Login Form
+  ══════════════════════════════════ -->
+  <div id="step-login" class="recovery-step">
+
+    <span class="back-link" onclick="showStep('step-landing')">
+      <i class="fa fa-arrow-left"></i> Back
+    </span>
+
+    <div class="auth-logo" style="margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">👤</div>
+      <h1>User Sign In</h1>
+      <p>Access your blood donation dashboard</p>
+    </div>
+
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="li-username" placeholder="Enter your username" required autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="li-password" placeholder="Enter your password" required autocomplete="current-password">
+          <span class="pw-toggle" onclick="togglePw('li-password','li-eye')">
+            <i id="li-eye" class="fa-solid fa-eye"></i>
+          </span>
+        </div>
+      </div>
+
+      <!-- Forgot Password link -->
+      <div style="text-align:right;margin:-8px 0 14px">
+        <span class="back-link" style="margin:0;font-size:13px;color:var(--crimson);font-weight:600"
+              onclick="showStep('step-method')">
+          <i class="fa fa-key"></i> Forgot Password?
+        </span>
+      </div>
+
+      <button type="submit" class="btn-primary" id="loginBtn">
+        <i class="fa fa-sign-in-alt"></i> Sign In
+      </button>
+      <div id="loginMsg" class="msg-box"></div>
+    </form>
+
+    <div class="auth-footer">
+      New here? <a href="/signup">Create Account</a>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 1 — Choose Recovery Method
+  ══════════════════════════════════ -->
+  <div id="step-method" class="recovery-step">
+
+    <span class="back-link" onclick="showStep('step-login')">
+      <i class="fa fa-arrow-left"></i> Back to Login
+    </span>
+
+    <div class="auth-logo" style="margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">🔐</div>
+      <h1>Forgot Password</h1>
+      <p>Choose how you'd like to receive your OTP</p>
+    </div>
+
+    <div class="method-cards">
+      <div class="method-card" id="mc-email" onclick="selectMethod('email')">
+        <span class="mc-icon">📧</span>
+        <h4>Email</h4>
+        <p>Send OTP to your registered email</p>
+      </div>
+      <div class="method-card" id="mc-phone" onclick="selectMethod('phone')">
+        <span class="mc-icon">📱</span>
+        <h4>Phone</h4>
+        <p>Send OTP to your registered phone</p>
+      </div>
+    </div>
+
+    <div class="form-group" id="identifier-group" style="display:none">
+      <label id="identifier-label">Email Address</label>
+      <input type="text" id="recovery-identifier" placeholder="Enter your email">
+    </div>
+
+    <button class="btn-primary" id="sendOtpBtn" style="display:none" onclick="sendOTP()">
+      <i class="fa fa-paper-plane"></i> Send OTP
+    </button>
+    <div id="methodMsg" class="msg-box"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 2 — Enter OTP
+  ══════════════════════════════════ -->
+  <div id="step-otp" class="recovery-step">
+
+    <span class="back-link" onclick="showStep('step-method')">
+      <i class="fa fa-arrow-left"></i> Change Method
+    </span>
+
+    <div class="recovery-breadcrumb">
+      <span>Forgot Password</span>
+      <span class="rb-sep">›</span>
+      <span>Choose Method</span>
+      <span class="rb-sep">›</span>
+      <span class="rb-step">Verify OTP</span>
+    </div>
+
+    <div class="auth-logo" style="margin-bottom:12px">
+      <div style="font-size:40px;margin-bottom:8px">🔢</div>
+      <h1>Enter OTP</h1>
+      <p id="otp-sent-to">OTP sent to your email</p>
+    </div>
+
+    <!-- Demo OTP display (remove in production) -->
+    <div class="otp-demo-badge" id="otp-demo-box" style="display:none">
+      <i class="fa fa-info-circle"></i> Demo OTP: <strong id="otp-demo-val">——</strong>
+      <div style="font-size:11px;margin-top:3px;opacity:0.8">(In production this would be sent via SMS/Email)</div>
+    </div>
+
+    <!-- 6 digit boxes -->
+    <div class="otp-boxes">
+      <input class="otp-box" id="otp0" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpInput(this,0)">
+      <input class="otp-box" id="otp1" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpInput(this,1)">
+      <input class="otp-box" id="otp2" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpInput(this,2)">
+      <input class="otp-box" id="otp3" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpInput(this,3)">
+      <input class="otp-box" id="otp4" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpInput(this,4)">
+      <input class="otp-box" id="otp5" maxlength="1" inputmode="numeric" pattern="[0-9]" oninput="otpInput(this,5)">
+    </div>
+
+    <!-- Countdown -->
+    <div class="otp-timer">
+      OTP expires in <span class="timer-val" id="timer-display">60</span>s
+      &nbsp;·&nbsp;
+      <span style="cursor:pointer;color:var(--crimson);font-weight:600" onclick="resendOTP()">Resend</span>
+    </div>
+
+    <button class="btn-primary" onclick="verifyOTP()">
+      <i class="fa fa-check-circle"></i> Verify OTP
+    </button>
+    <div id="otpMsg" class="msg-box"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 3 — Reset Password
+  ══════════════════════════════════ -->
+  <div id="step-reset" class="recovery-step">
+
+    <div class="recovery-breadcrumb">
+      <span>Forgot Password</span>
+      <span class="rb-sep">›</span>
+      <span>Verify OTP</span>
+      <span class="rb-sep">›</span>
+      <span class="rb-step">Reset Password</span>
+    </div>
+
+    <div class="auth-logo" style="margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:8px">🔒</div>
+      <h1>New Password</h1>
+      <p>Choose a strong password for your account</p>
+    </div>
+
+    <div class="form-group">
+      <label>New Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="new-password" placeholder="Min 8 · 1 upper · 1 number · 1 symbol"
+               oninput="checkResetStrength(this.value)">
+        <span class="pw-toggle" onclick="togglePw('new-password','np-eye')">
+          <i id="np-eye" class="fa-solid fa-eye"></i>
+        </span>
+      </div>
+      <div class="pw-strength" style="margin-top:6px">
+        <div class="pw-strength-bar"><div class="pw-strength-fill" id="reset-pw-fill"></div></div>
+        <span class="pw-strength-label" id="reset-pw-label">Enter a password</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Confirm New Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="confirm-password" placeholder="Repeat new password">
+        <span class="pw-toggle" onclick="togglePw('confirm-password','cp-eye')">
+          <i id="cp-eye" class="fa-solid fa-eye"></i>
+        </span>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="resetPassword()">
+      <i class="fa fa-lock"></i> Reset Password
+    </button>
+    <div id="resetMsg" class="msg-box"></div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       STEP 4 — Success
+  ══════════════════════════════════ -->
+  <div id="step-success" class="recovery-step">
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:64px;margin-bottom:16px">✅</div>
+      <h2 style="color:var(--success);font-size:20px;font-weight:800;margin-bottom:8px">Password Reset!</h2>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:24px">
+        Your password has been updated successfully.
+      </p>
+      <a href="/signin" class="btn-primary" style="display:inline-block;text-decoration:none;text-align:center">
+        <i class="fa fa-sign-in-alt"></i> Go to Login
+      </a>
+    </div>
+  </div>
+
+</div><!-- /auth-card -->
+
+</div><!-- /landing-wrap -->
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  // ── Auto-login: if session cookie is still valid, skip to correct page ──
+  (async function checkExistingSession() {
+    try {
+      const res  = await fetch("/api/me");
+      const data = await res.json();
+      if (data.authenticated) {
+        // Admin users belong on the admin command panel, not the user dashboard
+        const target = data.user?.role === "admin" ? "/admin-command-panel" : "/dashboard";
+        window.location.replace(target);
+      }
+    } catch { /* no session — show landing */ }
+  })();
+
+  // ── Show error banner if redirected from a protected route ──
+  (function checkErrorParam() {
+    const params = new URLSearchParams(window.location.search);
+    const error  = params.get("error");
+    const from   = params.get("from");
+    const msg    = document.getElementById("loginMsg");
+    if (!msg) return;
+    if (from === "signup") {
+      showStep('step-login');
+      msg.textContent = "✓ Account created! Please log in with your credentials.";
+      msg.className   = "msg-box msg-success";
+    } else if (error === "unauthorized") {
+      showStep('step-login');
+      msg.textContent = "⛔ Admin access required. Please log in with an admin account.";
+      msg.className   = "msg-box msg-error";
+    } else if (error === "login_required") {
+      showStep('step-login');
+      msg.textContent = "🔒 Please log in to continue.";
+      msg.className   = "msg-box msg-error";
+    }
+  })();
+
+  // ── State ──
+  let selectedMethod   = "";
+  let recoveryIdentifier = "";
+  let otpTimerInterval = null;
+
+  // ── Step navigation ──
+  function showStep(stepId) {
+    document.querySelectorAll(".recovery-step").forEach(s => s.classList.remove("active"));
+    document.getElementById(stepId).classList.add("active");
+  }
+
+  // ── Method selection ──
+  function selectMethod(method) {
+    selectedMethod = method;
+    document.querySelectorAll(".method-card").forEach(c => c.classList.remove("selected"));
+    document.getElementById("mc-" + method).classList.add("selected");
+
+    const group = document.getElementById("identifier-group");
+    const label = document.getElementById("identifier-label");
+    const input = document.getElementById("recovery-identifier");
+    const btn   = document.getElementById("sendOtpBtn");
+
+    group.style.display = "block";
+    btn.style.display   = "block";
+
+    if (method === "email") {
+      label.textContent    = "Email Address";
+      input.type           = "email";
+      input.placeholder    = "you@email.com";
+    } else {
+      label.textContent    = "Phone Number";
+      input.type           = "tel";
+      input.placeholder    = "+91XXXXXXXXXX or 9XXXXXXXXX";
+    }
+    input.value = "";
+    input.focus();
+  }
+
+  // ── Send OTP ──
+  async function sendOTP() {
+    const identifier = document.getElementById("recovery-identifier").value.trim();
+    const msg        = document.getElementById("methodMsg");
+    const btn        = document.getElementById("sendOtpBtn");
+
+    if (!identifier) { setMsg(msg, "Please enter your " + selectedMethod, "error"); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Sending...`;
+
+    try {
+      const res  = await fetch("/api/otp/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: selectedMethod, identifier })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        recoveryIdentifier = identifier;
+        // Show demo OTP
+        document.getElementById("otp-demo-box").style.display = "block";
+        document.getElementById("otp-demo-val").textContent   = data.otp_demo;
+        document.getElementById("otp-sent-to").textContent    =
+          `OTP sent to your ${selectedMethod}: ${identifier}`;
+        // Clear boxes
+        for (let i = 0; i < 6; i++) document.getElementById("otp" + i).value = "";
+        showStep("step-otp");
+        startOtpTimer(data.expires_in || 60);
+        document.getElementById("otp0").focus();
+      } else {
+        setMsg(msg, data.message, "error");
+      }
+    } catch { setMsg(msg, "Network error. Try again.", "error"); }
+    finally {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa fa-paper-plane"></i> Send OTP`;
+    }
+  }
+
+  async function resendOTP() {
+    if (!recoveryIdentifier || !selectedMethod) { showStep("step-method"); return; }
+    clearInterval(otpTimerInterval);
+    document.getElementById("methodMsg").textContent = "";
+    // Re-trigger send
+    document.getElementById("recovery-identifier").value = recoveryIdentifier;
+    await sendOTP();
+  }
+
+  // ── OTP digit input navigation ──
+  function otpInput(el, idx) {
+    el.value = el.value.replace(/\D/g, "").slice(-1);
+    if (el.value && idx < 5) document.getElementById("otp" + (idx + 1)).focus();
+    // Auto-verify when all 6 filled
+    const code = Array.from({length:6}, (_,i) => document.getElementById("otp"+i).value).join("");
+    if (code.length === 6) verifyOTP();
+  }
+
+  // ── Countdown timer ──
+  function startOtpTimer(seconds) {
+    clearInterval(otpTimerInterval);
+    let remaining = seconds;
+    const display = document.getElementById("timer-display");
+    display.classList.remove("expired");
+    display.textContent = remaining;
+
+    otpTimerInterval = setInterval(() => {
+      remaining--;
+      display.textContent = remaining;
+      if (remaining <= 0) {
+        clearInterval(otpTimerInterval);
+        display.textContent = "0";
+        display.classList.add("expired");
+      }
+    }, 1000);
+  }
+
+  // ── Verify OTP ──
+  async function verifyOTP() {
+    const code = Array.from({length:6}, (_,i) => document.getElementById("otp"+i).value).join("");
+    const msg  = document.getElementById("otpMsg");
+
+    if (code.length < 6) { setMsg(msg, "Please enter all 6 digits", "error"); return; }
+
+    try {
+      const res  = await fetch("/api/otp/verify", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: recoveryIdentifier, otp: code })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        clearInterval(otpTimerInterval);
+        setMsg(msg, data.message, "success");
+        setTimeout(() => showStep("step-reset"), 800);
+      } else {
+        setMsg(msg, data.message, "error");
+        // Shake boxes on wrong OTP
+        document.querySelectorAll(".otp-box").forEach(b => {
+          b.style.borderColor = "var(--crimson)";
+          b.style.background  = "var(--crimson-pale)";
+          setTimeout(() => { b.style.borderColor = ""; b.style.background = ""; }, 1000);
+        });
+      }
+    } catch { setMsg(msg, "Verification failed. Try again.", "error"); }
+  }
+
+  // ── Password strength (reset screen) ──
+  function checkResetStrength(pw) {
+    const fill  = document.getElementById("reset-pw-fill");
+    const label = document.getElementById("reset-pw-label");
+    let score = 0;
+    if (pw.length >= 8)                             score++;
+    if (/[A-Z]/.test(pw))                           score++;
+    if (/[0-9]/.test(pw))                           score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(pw))         score++;
+    const levels = [
+      { w:"0%",   bg:"var(--slate-200)",    text:"Enter a password" },
+      { w:"25%",  bg:"var(--crimson-light)",text:"Weak" },
+      { w:"50%",  bg:"var(--warning)",      text:"Fair" },
+      { w:"75%",  bg:"var(--info)",         text:"Good" },
+      { w:"100%", bg:"var(--success)",      text:"Strong ✓" },
+    ];
+    const lvl = levels[score] || levels[0];
+    fill.style.width      = lvl.w;
+    fill.style.background = lvl.bg;
+    label.textContent     = lvl.text;
+    label.style.color     = lvl.bg;
+  }
+
+  // ── Reset Password ──
+  async function resetPassword() {
+    const password = document.getElementById("new-password").value;
+    const confirm  = document.getElementById("confirm-password").value;
+    const msg      = document.getElementById("resetMsg");
+
+    if (!password || !confirm) { setMsg(msg, "Please fill both fields", "error"); return; }
+    if (password !== confirm)  { setMsg(msg, "Passwords do not match", "error"); return; }
+
+    try {
+      const res  = await fetch("/api/password/reset", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password, confirm })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setMsg(msg, data.message, "success");
+        setTimeout(() => showStep("step-success"), 900);
+      } else {
+        setMsg(msg, data.message, "error");
+      }
+    } catch { setMsg(msg, "Reset failed. Try again.", "error"); }
+  }
+</script>
+</body>
+</html>

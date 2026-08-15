@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="app-body">
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood Donation System</span>
+  <div class="nav-user">
+    <i class="fa fa-user-circle"></i>
+    <span id="nav-username">…</span>
+    <span style="font-size:11px;font-weight:700;background:#0d9488;color:#fff;padding:2px 8px;border-radius:20px;margin-left:6px">Receiver</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory" class="active"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/profile"><i class="fa fa-medal"></i> Donor Badges</a>
+  <a href="/rider"><i class="fa fa-motorcycle"></i> Delivery Partners</a>
+  <a href="/eligibility"><i class="fa fa-stethoscope"></i> Eligibility Check</a>
+</nav>
+
+<div class="main">
+
+  <!-- City Filter Bar -->
+  <div class="city-filter-bar">
+    <label><i class="fa fa-map-marker-alt"></i> Select City:</label>
+    <select id="city-filter" onchange="onCityChange()">
+      <option value="Virar">Virar</option>
+      <option value="Nalasopara">Nalasopara</option>
+      <option value="Vasai">Vasai</option>
+      <option value="Naigaon">Naigaon</option>
+      <option value="Bhayandar">Bhayandar</option>
+      <option value="Mira Road">Mira Road</option>
+      <option value="Dahisar">Dahisar</option>
+      <option value="Borivali">Borivali</option>
+      <option value="Kandivali">Kandivali</option>
+      <option value="Malad">Malad</option>
+    </select>
+    <div class="city-bank-info" id="city-bank-label">
+      <i class="fa fa-hospital"></i>
+      <span>Virar Central Blood Bank, Station Road</span>
+    </div>
+  </div>
+
+  <!-- Blood Stock Cards -->
+  <div style="padding:16px 0 4px">
+    <a href="/dashboard" style="display:inline-flex;align-items:center;gap:6px;
+       font-size:13px;font-weight:700;color:var(--crimson);background:var(--crimson-pale);
+       border:1.5px solid var(--crimson-soft);border-radius:var(--radius);
+       padding:6px 14px;text-decoration:none;
+       transition:background 0.2s" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='var(--crimson-pale)'">
+      <i class="fa fa-arrow-left"></i> Back to Dashboard
+    </a>
+  </div>
+  <div class="page-title"><i class="fa fa-tint"></i> Blood Inventory — <span id="city-title">Virar</span></div>
+
+  <div id="inv-grid" class="inv-grid">
+    <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Table + Chart -->
+  <div class="two-col">
+
+    <!-- Stock Details — Admin Only -->
+    <div class="card" id="admin-stock-card">
+      <div class="card-header">
+        <h3><i class="fa fa-table"></i> Stock Details <span class="badge badge-critical" style="font-size:10px;margin-left:6px">Admin Only</span></h3>
+        <button class="btn btn-sm btn-outline" onclick="loadInventory()"><i class="fa fa-sync"></i> Refresh</button>
+      </div>
+      <!-- Admin view -->
+      <div id="admin-stock-view">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Blood Group</th>
+                <th>Units</th>
+                <th>Cost / Bag</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inv-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:20px"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Non-admin restricted message -->
+      <div id="non-admin-stock-view" style="display:none;text-align:center;padding:32px">
+        <i class="fa fa-lock" style="font-size:36px;color:var(--slate-300);display:block;margin-bottom:12px"></i>
+        <p style="color:var(--muted);font-size:14px">Stock details are restricted to Admin accounts.</p>
+        <p style="color:var(--muted);font-size:13px;margin-top:6px">You can view availability status below.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa fa-chart-pie"></i> Distribution</h3>
+        <span style="font-size:12px;color:var(--muted)" id="chart-city-label">All Locations</span>
+      </div>
+      <div class="chart-wrap" style="max-width:300px;margin:0 auto;position:relative;min-height:220px">
+        <canvas id="inv-chart"></canvas>
+        <div id="inv-chart-loading" class="loading-state" style="padding:20px">
+          <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:auto"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Donor Registry -->
+  <div class="card" id="donors">
+    <div class="card-header">
+      <h3><i class="fa fa-users"></i> Donor Registry</h3>
+    </div>
+
+    <div class="filter-bar">
+      <select id="filter-blood" onchange="filterDonors()">
+        <option value="">All Blood Groups</option>
+        <option>A+</option><option>A-</option>
+        <option>B+</option><option>B-</option>
+        <option>O+</option><option>O-</option>
+        <option>AB+</option><option>AB-</option>
+      </select>
+      <input type="text" id="filter-city" placeholder="Filter by city..." oninput="filterDonors()">
+      <button class="btn btn-outline btn-sm" onclick="filterDonors()"><i class="fa fa-search"></i> Search</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Blood Group</th>
+            <th>City</th>
+            <th>Phone</th>
+            <th>Donations</th>
+            <th>Status</th>
+            <th>Certificate</th>
+          </tr>
+        </thead>
+        <tbody id="donors-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:20px"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:auto"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  const CITY_BANKS = {
+    "Virar":      "Virar Central Blood Bank, Station Road",
+    "Nalasopara": "Nalasopara Blood Centre, East",
+    "Vasai":      "Vasai Central Blood Bank, Vasai Road",
+    "Naigaon":    "Naigaon Blood Centre, Near Station",
+    "Bhayandar":  "Bhayandar Central Blood Bank, West",
+    "Mira Road":  "Mira Road Blood Centre, Sector 1",
+    "Dahisar":    "Dahisar Central Blood Bank, East",
+    "Borivali":   "Borivali Blood Centre, S.V. Road",
+    "Kandivali":  "Kandivali Central Blood Bank, West",
+    "Malad":      "Malad Blood Centre, Malad West",
+  };
+
+  function onCityChange() {
+    const city = document.getElementById("city-filter").value;
+    document.getElementById("city-title").textContent = city;
+    const bankLabel = document.getElementById("city-bank-label");
+    if (bankLabel) bankLabel.querySelector("span").textContent = CITY_BANKS[city] || city;
+    // Single serialized call — loadInventoryByCity handles grid + chart atomically
+    loadInventoryByCity(city);
+    loadDonors("", city);
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const city = document.getElementById("city-filter")?.value || "Virar";
+    document.getElementById("city-title").textContent = city;
+    loadInventoryByCity(city);
+    loadDonors("", city);
+    if (window.location.hash === "#donors") {
+      setTimeout(() => document.getElementById("donors")?.scrollIntoView({ behavior: "smooth" }), 400);
+    }
+  });
+
+  // ── Load logged-in user name into navbar ──
+  (async function loadNavUser() {
+    try {
+      let user = JSON.parse(sessionStorage.getItem("sbdms_user") || "null");
+      if (!user) {
+        const res  = await fetch("/api/me");
+        const data = await res.json();
+        if (data.authenticated) user = data.user;
+      }
+      const el = document.getElementById("nav-username");
+      if (el && user) el.textContent = user.first_name || user.full_name || user.username;
+    } catch {}
+  })();
+</script>
+</body>
+</html>

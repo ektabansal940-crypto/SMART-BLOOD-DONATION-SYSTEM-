@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Smart Blood System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="app-body">
+
+<!-- Navbar -->
+<header class="navbar">
+  <div class="hamburger" onclick="toggleSidebar()">&#9776;</div>
+  <span class="brand">🩸 Smart Blood Donation System</span>
+  <div class="nav-user" id="nav-user-info" style="cursor:pointer" onclick="logoutUser()">
+    <i class="fa fa-user-circle"></i>
+    <span id="nav-username">Loading…</span>
+    <span style="font-size:11px;opacity:0.7;margin-left:4px">(Logout)</span>
+  </div>
+</header>
+
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">Navigation</div>
+  <a href="/dashboard" class="active"><i class="fa fa-home"></i> Dashboard</a>
+  <a href="/inventory"><i class="fa fa-tint"></i> Inventory</a>
+  <a href="/finance"><i class="fa fa-receipt"></i> Finance</a>
+  <a href="/payment"><i class="fa fa-credit-card"></i> Payment Portal</a>
+  <a href="/profile"><i class="fa fa-medal"></i> Donor Badges</a>
+  <a href="/rider"><i class="fa fa-motorcycle"></i> Delivery Partners</a>
+  <a href="/eligibility"><i class="fa fa-stethoscope"></i> Eligibility Check</a>
+</nav>
+
+<div class="main">
+
+  <div class="page-title"><i class="fa fa-chart-line"></i> Command Center</div>
+
+  <!-- ── Personalised Greeting Banner ── -->
+  <div id="dashboard-greeting"
+       style="display:none;align-items:center;gap:10px;
+              background:#ffffff;
+              border:1.5px solid #e2e8f0;border-radius:var(--radius-lg);
+              padding:14px 20px;margin-bottom:20px;
+              font-size:17px;font-weight:600;color:#1e293b;
+              box-shadow:0 2px 8px rgba(15,23,42,0.07)">
+  </div>
+
+  <!-- ── Pending Payment Alert Banner ── -->
+  <div id="pending-payment-alert"
+       style="display:none;align-items:center;gap:14px;
+              background:linear-gradient(135deg, #9b1c1c 0%, #dc2626 100%);
+              border:none;border-radius:var(--radius-lg);
+              padding:16px 20px;margin-bottom:20px;
+              box-shadow:0 4px 16px rgba(155,28,28,0.35);
+              cursor:pointer;transition:transform 0.2s ease"
+       onclick="window.location.href='/payment'"
+       onmouseover="this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.transform='translateY(0)'">
+    <div style="font-size:32px;flex-shrink:0">⚠️</div>
+    <div style="flex:1">
+      <h3 style="font-size:16px;font-weight:700;color:#ffffff;margin:0 0 4px 0">
+        Payment Required
+      </h3>
+      <p style="font-size:13px;color:rgba(255,255,255,0.9);margin:0;line-height:1.4">
+        You have <strong id="pending-count">0</strong> unpaid transaction(s). Click here to complete your payment now.
+      </p>
+    </div>
+    <button onclick="event.stopPropagation(); window.location.href='/payment'" 
+            style="background:rgba(255,255,255,0.2);color:#fff;padding:10px 24px;border-radius:8px;
+                   border:1px solid rgba(255,255,255,0.3);font-size:14px;font-weight:700;cursor:pointer;
+                   font-family:inherit;transition:background 0.2s ease;white-space:nowrap;flex-shrink:0"
+            onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+      <i class="fa fa-credit-card"></i> Pay Now
+    </button>
+  </div>
+
+  <!-- ── Emergency Alert Banner ── -->
+  <div class="emergency-alert-banner" onclick="openEmergencyModal()">
+    <div class="eab-icon">🚨</div>
+    <div>
+      <h3>Emergency Blood Request</h3>
+      <p>Instantly locate compatible donors from the database and dispatch delivery.</p>
+    </div>
+    <span class="eab-cta"><i class="fa fa-bolt"></i> Raise Request</span>
+  </div>
+
+  <!-- ── Stat Cards ── -->
+  <div class="stats-grid">
+
+    <a href="{{ url_for('inventory') }}" class="stat-card-link">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa fa-tint"></i></div>
+        <div class="stat-info"><h3 id="stat-units">—</h3><p>Total Blood Units</p></div>
+        <span class="stat-arrow">View →</span>
+      </div>
+    </a>
+
+    <a href="{{ url_for('inventory') }}#donors" class="stat-card-link">
+      <div class="stat-card success">
+        <div class="stat-icon"><i class="fa fa-users"></i></div>
+        <div class="stat-info"><h3 id="stat-donors">—</h3><p>Total Donors</p></div>
+        <span class="stat-arrow">View →</span>
+      </div>
+    </a>
+
+    <a href="{{ url_for('inventory') }}#donors" class="stat-card-link">
+      <div class="stat-card teal">
+        <div class="stat-icon"><i class="fa fa-user-check"></i></div>
+        <div class="stat-info"><h3 id="stat-avail">—</h3><p>Available Donors</p></div>
+        <span class="stat-arrow">View →</span>
+      </div>
+    </a>
+
+    <a href="#emergency-section" class="stat-card-link" onclick="openEmergencyModal(); return false;">
+      <div class="stat-card emergency">
+        <div class="stat-icon"><i class="fa fa-exclamation-circle"></i></div>
+        <div class="stat-info"><h3 id="stat-emerg">—</h3><p>Active Emergencies</p></div>
+        <span class="stat-arrow">Act →</span>
+      </div>
+    </a>
+
+    <a href="{{ url_for('payment_portal') }}" class="stat-card-link">
+      <div class="stat-card">
+        <div class="stat-icon"><i class="fa fa-file-invoice"></i></div>
+        <div class="stat-info"><h3 id="stat-txn">—</h3><p>Transactions</p></div>
+        <span class="stat-arrow">View →</span>
+      </div>
+    </a>
+
+    <a href="{{ url_for('finance') }}" class="stat-card-link">
+      <div class="stat-card success">
+        <div class="stat-icon"><i class="fa fa-rupee-sign"></i></div>
+        <div class="stat-info"><h3 id="stat-revenue">—</h3><p>Total Revenue</p></div>
+        <span class="stat-arrow">View →</span>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ── Live Blood Distribution Chart + Recent Orders ── -->
+  <div class="cmd-section"><i class="fa fa-chart-bar"></i> Live Blood Distribution</div>
+
+  <div class="two-col">
+
+    <!-- Blood Distribution Chart -->
+    <a href="{{ url_for('inventory') }}" class="card-link">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fa fa-chart-bar"></i> Units by Blood Group</h3>
+          <span style="font-size:12px;color:var(--muted)">Live from SQL →</span>
+        </div>
+        <!-- City filter for chart -->
+        <div style="margin-bottom:14px">
+          <select id="chart-city-filter"
+                  onchange="loadBloodDistributionChart(this.value)"
+                  style="padding:7px 12px;border:1.5px solid var(--slate-200);
+                         border-radius:var(--radius);font-size:13px;outline:none;
+                         background:white;color:var(--slate-700);width:100%">
+            <option value="">All Locations (Combined)</option>
+            <option>Virar</option><option>Nalasopara</option><option>Vasai</option>
+            <option>Naigaon</option><option>Bhayandar</option><option>Mira Road</option>
+            <option>Dahisar</option><option>Borivali</option><option>Kandivali</option>
+            <option>Malad</option>
+          </select>
+        </div>
+        <div class="blood-dist-chart-wrap">
+          <canvas id="bloodDistChart"></canvas>
+        </div>
+        <div id="chart-loading" class="loading-state" style="padding:20px">
+          <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:auto"></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Recent Orders -->
+    <a href="{{ url_for('payment_portal') }}" class="card-link">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fa fa-receipt"></i> Recent Orders</h3>
+          <span style="font-size:12px;color:var(--muted)">Click to pay →</span>
+        </div>
+        <div id="recent-orders-box">
+          <div class="loading-state" style="padding:16px">
+            <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:auto"></div>
+          </div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ── Emergency Requests ── -->
+  <div class="cmd-section"><i class="fa fa-bolt"></i> Emergency Alerts</div>
+
+  <div class="card" id="emergency-section">
+    <div class="card-header">
+      <h3><i class="fa fa-history"></i> Recent Emergency Requests</h3>
+      <button class="btn btn-sm btn-outline" onclick="loadRecentEmergencies()">
+        <i class="fa fa-sync"></i> Refresh
+      </button>
+    </div>
+    <div id="recent-emergencies" class="emergency-list">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Key Features ── -->
+  <div class="cmd-section"><i class="fa fa-star"></i> Key Features</div>
+
+  <div class="key-features-grid">
+
+    <!-- 1. AI Donor Matching — opens inline search tool -->
+    <div class="kf-card" onclick="openDonorMatchModal()" style="cursor:pointer">
+      <div class="kf-icon" style="background:var(--crimson-pale);color:var(--crimson)">
+        <i class="fa fa-brain"></i>
+      </div>
+      <div class="kf-body">
+        <h4>AI Donor Matching</h4>
+        <p>Search live donor database by blood group — ranked by donation count &amp; availability.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </div>
+
+    <!-- 2. Ambulance Tracking — opens live ambulance delivery tracker -->
+    <div class="kf-card" onclick="openAmbulanceModal()" style="cursor:pointer">
+      <div class="kf-icon" style="background:#fff1f2;color:#e11d48">
+        <i class="fa fa-ambulance"></i>
+      </div>
+      <div class="kf-body">
+        <h4>Ambulance Delivery Tracking</h4>
+        <p>Track active blood deliveries — live ambulance position, ETA countdown, and status.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </div>
+
+    <!-- 3. Blood Compatibility — opens crossmatch checker tool -->
+    <div class="kf-card" onclick="openCompatModal()" style="cursor:pointer">
+      <div class="kf-icon" style="background:#f0fdfa;color:#0d9488">
+        <i class="fa fa-droplet"></i>
+      </div>
+      <div class="kf-body">
+        <h4>Blood Compatibility Check</h4>
+        <p>Instantly see which blood groups can donate to or receive from any blood type.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </div>
+
+    <!-- 4. Eligibility Check — links to real page -->
+    <a href="{{ url_for('eligibility_page') }}" class="kf-card">
+      <div class="kf-icon" style="background:#eff6ff;color:#2563eb">
+        <i class="fa fa-stethoscope"></i>
+      </div>
+      <div class="kf-body">
+        <h4>Donor Eligibility Check</h4>
+        <p>Health pre-screening: age, weight, hemoglobin &amp; 90-day cooldown validation.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </a>
+
+    <!-- 5. Appointment Booking — REMOVED -->
+
+    <!-- 6. Donor Rewards — links to real page -->
+    <a href="{{ url_for('profile_page') }}" class="kf-card">
+      <div class="kf-icon" style="background:#fefce8;color:#ca8a04">
+        <i class="fa fa-award"></i>
+      </div>
+      <div class="kf-body">
+        <h4>Donor Rewards &amp; Badges</h4>
+        <p>Bronze → Silver → Gold → Guardian Angel — real badge progression tracked per donor.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </a>
+
+    <!-- 7. Emergency Dispatch — triggers modal -->
+    <div class="kf-card" onclick="openEmergencyModal()" style="cursor:pointer">
+      <div class="kf-icon" style="background:#fff1f2;color:#e11d48">
+        <i class="fa fa-triangle-exclamation"></i>
+      </div>
+      <div class="kf-body">
+        <h4>Emergency Dispatch</h4>
+        <p>Raise a priority blood request — compatible donors found &amp; ERU dispatched instantly.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </div>
+
+    <!-- 8. Delivery Partner Network — links to rider page -->
+    <a href="{{ url_for('rider_dashboard') }}" class="kf-card">
+      <div class="kf-icon" style="background:#f0fdf4;color:#15803d">
+        <i class="fa fa-motorcycle"></i>
+      </div>
+      <div class="kf-body">
+        <h4>Delivery Partner Network</h4>
+        <p>Manage ERU requests — start, track and complete blood deliveries with ETA countdown.</p>
+      </div>
+      <span class="kf-arrow"><i class="fa fa-arrow-right"></i></span>
+    </a>
+
+  </div>
+
+  <style>
+    .key-features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .kf-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: var(--white);
+      border: 1.5px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 18px 16px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 2px 8px rgba(15,23,42,0.04);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      position: relative;
+    }
+    .kf-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--crimson);
+      box-shadow: 0 10px 24px rgba(155,28,28,0.12);
+    }
+    .kf-icon {
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .kf-body { flex: 1; min-width: 0; }
+    .kf-body h4 { font-size: 14.5px; font-weight: 700; color: var(--slate-800); margin: 0 0 4px; }
+    .kf-body p { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 0; }
+    .kf-arrow { flex-shrink: 0; color: var(--slate-300); font-size: 13px; align-self: center; transition: color 0.2s, transform 0.2s; }
+    .kf-card:hover .kf-arrow { color: var(--crimson); transform: translateX(3px); }
+
+    /* ── Feature modals ── */
+    .feat-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 9000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .feat-modal-overlay.open { display: flex; }
+    .feat-modal {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 64px rgba(15,23,42,0.22);
+      width: 100%;
+      max-width: 620px;
+      max-height: 88vh;
+      overflow-y: auto;
+      animation: slideUp 0.28s ease;
+    }
+    .feat-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--slate-100);
+      position: sticky;
+      top: 0;
+      background: var(--white);
+      z-index: 1;
+    }
+    .feat-modal-header h3 { font-size: 16px; font-weight: 800; color: var(--slate-800); margin: 0; }
+    .feat-modal-body { padding: 20px 22px; }
+    .feat-modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .feat-modal-close:hover { background: var(--slate-100); color: var(--slate-800); }
+
+    /* Donor match results */
+    .dm-result-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--slate-100);
+    }
+    .dm-result-row:last-child { border-bottom: none; }
+    .dm-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg,var(--crimson-dark),var(--crimson-light));
+      color: white; font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .dm-info { flex: 1; }
+    .dm-info strong { font-size: 14px; color: var(--slate-800); display: block; }
+    .dm-info span { font-size: 12px; color: var(--muted); }
+    .dm-badge-pill {
+      font-size: 11px; font-weight: 700; padding: 3px 10px;
+      border-radius: 20px; background: var(--success-pale); color: var(--success);
+    }
+    .dm-badge-pill.unavail { background: var(--slate-100); color: var(--muted); }
+
+    /* GPS map container */
+    #gps-map { height: 360px; border-radius: var(--radius); overflow: hidden; }
+
+    /* Compat table */
+    .compat-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .compat-table th { background: var(--slate-50); padding: 8px 12px; text-align: left; font-weight: 700; color: var(--slate-700); border-bottom: 2px solid var(--slate-200); }
+    .compat-table td { padding: 9px 12px; border-bottom: 1px solid var(--slate-100); }
+    .compat-table tr:last-child td { border-bottom: none; }
+    .compat-table tr.highlight td { background: var(--crimson-pale); font-weight: 600; }
+    .compat-can { color: var(--success); font-weight: 700; }
+    .compat-no  { color: var(--slate-300); }
+  </style>
+
+</div>
+
+<!-- Emergency Modal -->
+<div id="emergency-modal" class="modal-overlay">
+  <div class="modal">
+    <h3><i class="fa fa-bolt"></i> Emergency Blood Request</h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ── AI Donor Matching Modal ── -->
+<div id="donor-match-modal" class="feat-modal-overlay" onclick="if(event.target===this)closeFeatModal('donor-match-modal')">
+  <div class="feat-modal">
+    <div class="feat-modal-header">
+      <h3><i class="fa fa-brain" style="color:var(--crimson);margin-right:8px"></i> AI Donor Matching</h3>
+      <button class="feat-modal-close" onclick="closeFeatModal('donor-match-modal')">✕</button>
+    </div>
+    <div class="feat-modal-body">
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+        <select id="dm-blood" style="flex:1;padding:9px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:14px;outline:none">
+          <option value="">All Blood Groups</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+        <input id="dm-city" placeholder="Filter by city…" style="flex:1;padding:9px 12px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:14px;outline:none">
+        <button class="btn btn-red" onclick="runDonorMatch()"><i class="fa fa-search"></i> Match</button>
+      </div>
+      <div id="dm-results">
+        <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Select criteria above and click Match.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Ambulance Delivery Tracking Modal ── -->
+<div id="ambulance-modal" class="feat-modal-overlay" onclick="if(event.target===this)closeFeatModal('ambulance-modal')">
+  <div class="feat-modal" style="max-width:660px">
+    <div class="feat-modal-header">
+      <h3><i class="fa fa-ambulance" style="color:#e11d48;margin-right:8px"></i> Ambulance Delivery Tracking</h3>
+      <button class="feat-modal-close" onclick="closeFeatModal('ambulance-modal')">✕</button>
+    </div>
+    <div class="feat-modal-body" id="ambulance-modal-body">
+      <div class="loading-state" style="padding:20px">
+        <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Blood Compatibility Modal ── -->
+<div id="compat-modal" class="feat-modal-overlay" onclick="if(event.target===this)closeFeatModal('compat-modal')">
+  <div class="feat-modal">
+    <div class="feat-modal-header">
+      <h3><i class="fa fa-droplet" style="color:#0d9488;margin-right:8px"></i> Blood Compatibility Checker</h3>
+      <button class="feat-modal-close" onclick="closeFeatModal('compat-modal')">✕</button>
+    </div>
+    <div class="feat-modal-body">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+        <label style="font-weight:700;font-size:14px;color:var(--slate-700)">Select blood group:</label>
+        <select id="compat-select" onchange="renderCompatTable(this.value)"
+                style="padding:9px 14px;border:1.5px solid var(--slate-200);border-radius:var(--radius);font-size:14px;font-weight:700;outline:none">
+          <option value="">— Pick one —</option>
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+      </div>
+      <div id="compat-result"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+  // ══════════════════════════════════════════════════════════
+  //  KEY FEATURE MODALS
+  // ══════════════════════════════════════════════════════════
+
+  function openFeatModal(id) {
+    document.getElementById(id).classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeFeatModal(id) {
+    document.getElementById(id).classList.remove("open");
+    document.body.style.overflow = "";
+    // Clean up ambulance maps when modal closes
+    if (id === "ambulance-modal") _cleanAmbMaps();
+  }
+
+  // ── 2. AMBULANCE DELIVERY TRACKING ───────────────────────
+  const CITY_COORDS_AMB = {
+    "Virar":      [19.4588,72.8110], "Nalasopara": [19.4209,72.7996],
+    "Vasai":      [19.3919,72.8397], "Naigaon":    [19.3636,72.8530],
+    "Bhayandar":  [19.3000,72.8500], "Mira Road":  [19.2812,72.8726],
+    "Bhayander":  [19.3000,72.8500],
+    "Dahisar":    [19.2490,72.8560], "Borivali":   [19.2307,72.8567],
+    "Kandivali":  [19.2043,72.8490], "Malad":      [19.1863,72.8484]
+  };
+  const CITY_DEST_AMB = {
+    "Virar":      [19.4650,72.8050], "Nalasopara": [19.4250,72.8050],
+    "Vasai":      [19.3950,72.8450], "Naigaon":    [19.3680,72.8580],
+    "Bhayandar":  [19.3050,72.8550], "Mira Road":  [19.2850,72.8780],
+    "Bhayander":  [19.3050,72.8550],
+    "Dahisar":    [19.2530,72.8600], "Borivali":   [19.2350,72.8620],
+    "Kandivali":  [19.2080,72.8540], "Malad":      [19.1900,72.8530]
+  };
+
+  // Track maps and intervals per card
+  let _ambMaps = {};
+  let _ambTimers = {};
+
+  function _cleanAmbMaps() {
+    Object.values(_ambTimers).forEach(t => clearInterval(t));
+    Object.values(_ambMaps).forEach(m => { try { m.remove(); } catch {} });
+    _ambMaps = {}; _ambTimers = {};
+  }
+
+  async function openAmbulanceModal() {
+    openFeatModal("ambulance-modal");
+    _cleanAmbMaps();
+    const body = document.getElementById("ambulance-modal-body");
+    body.innerHTML = '<div class="loading-state" style="padding:24px"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:auto"></div><p style="text-align:center;color:var(--muted);margin-top:10px;font-size:13px">Loading live deliveries…</p></div>';
+
+    let data;
+    try {
+      const res = await fetch("/api/eru/list");
+      data = await res.json();
+    } catch {
+      body.innerHTML = '<p style="color:var(--crimson);text-align:center;padding:20px">Failed to load deliveries. Try again.</p>';
+      return;
+    }
+
+    const active = data.filter(r => r.status === "in_transit" || r.status === "pending");
+    const done   = data.filter(r => r.status === "completed");
+
+    if (!active.length && !done.length) {
+      body.innerHTML = `
+        <div style="text-align:center;padding:30px 20px">
+          <div style="font-size:48px;margin-bottom:12px">🚑</div>
+          <p style="color:var(--muted);font-size:14px">No active deliveries right now.</p>
+          <p style="font-size:12px;color:var(--slate-400);margin-top:6px">
+            Start an emergency request to dispatch a delivery.
+          </p>
+          <button class="btn btn-red" style="margin-top:16px" onclick="closeFeatModal('ambulance-modal');openEmergencyModal()">
+            <i class="fa fa-bolt"></i> Raise Emergency Request
+          </button>
+        </div>`;
+      return;
+    }
+
+    // Summary pills
+    const inT  = data.filter(r => r.status === "in_transit").length;
+    const pend = data.filter(r => r.status === "pending").length;
+    const comp = data.filter(r => r.status === "completed").length;
+
+    let html = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:13px">
+        <span style="background:#fff1f2;color:#e11d48;padding:4px 12px;border-radius:20px;font-weight:700">
+          🔴 Pending: ${pend}
+        </span>
+        <span style="background:var(--teal-pale);color:var(--teal-dark);padding:4px 12px;border-radius:20px;font-weight:700">
+          🚑 In Transit: ${inT}
+        </span>
+        <span style="background:var(--success-pale);color:var(--success);padding:4px 12px;border-radius:20px;font-weight:700">
+          ✅ Completed: ${comp}
+        </span>
+      </div>`;
+
+    // Show active deliveries first, then completed (max 3)
+    const shown = [...active, ...done].slice(0, 5);
+    shown.forEach((r, idx) => {
+      const mapId   = `amb-map-${idx}`;
+      const pct     = r.eta_remaining != null && r.eta_seconds
+        ? Math.max(0, Math.min(100, Math.round((1 - r.eta_remaining / r.eta_seconds) * 100)))
+        : (r.status === "completed" ? 100 : 0);
+      const statusColor = r.status === "in_transit" ? "#e11d48"
+                        : r.status === "completed"   ? "var(--success)"
+                        : "var(--warning)";
+      const statusLabel = r.status === "in_transit" ? "🚑 In Transit"
+                        : r.status === "completed"   ? "✅ Delivered"
+                        : "⏳ Pending";
+
+      html += `
+        <div style="border:1.5px solid var(--slate-200);border-radius:var(--radius-lg);
+                    padding:16px;margin-bottom:16px;background:var(--white)">
+          <!-- Header row -->
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      flex-wrap:wrap;gap:8px;margin-bottom:12px">
+            <div>
+              <span style="font-size:12px;font-weight:700;color:var(--teal-dark);
+                           background:var(--teal-pale);padding:4px 10px;border-radius:20px">
+                ${r.eru_code}
+              </span>
+              <span style="font-size:12px;font-weight:700;color:${statusColor};
+                           margin-left:8px">${statusLabel}</span>
+            </div>
+            <div style="font-size:12px;color:var(--slate-600);display:flex;gap:12px">
+              <span>📍 ${r.distance_km || "—"} km</span>
+              <span><span class="blood-badge" style="font-size:11px">${r.blood_group}</span> ${r.units} unit(s)</span>
+            </div>
+          </div>
+
+          <!-- Patient + ETA info -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;
+                      font-size:12px;color:var(--slate-600);margin-bottom:12px">
+            <div><i class="fa fa-user" style="color:var(--crimson);margin-right:4px"></i>${r.patient_name || "—"}</div>
+            <div><i class="fa fa-clock" style="color:var(--teal);margin-right:4px"></i>ETA: ~${r.eta_minutes || "—"} min</div>
+            <div><i class="fa fa-location-dot" style="color:var(--muted);margin-right:4px"></i>${r.location}</div>
+            <div><i class="fa fa-money-bill" style="color:#ca8a04;margin-right:4px"></i>₹${r.delivery_fee != null ? Number(r.delivery_fee).toLocaleString("en-IN") : "—"}</div>
+          </div>
+
+          <!-- Progress bar -->
+          <div style="background:var(--slate-100);border-radius:20px;height:8px;
+                      overflow:hidden;position:relative;margin-bottom:6px">
+            <div style="height:100%;border-radius:20px;width:${pct}%;
+                        background:${r.status === "completed" ? "var(--success)" : "var(--crimson)"};
+                        transition:width 0.5s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;
+                      color:var(--muted);margin-bottom:12px">
+            <span>🏥 Blood Bank</span><span>🏨 Hospital</span>
+          </div>
+
+          <!-- Live Map -->
+          <div id="${mapId}" style="height:200px;border-radius:var(--radius);
+                                    overflow:hidden;border:1px solid var(--slate-200)"></div>
+        </div>`;
+    });
+
+    body.innerHTML = html;
+
+    // Init a map for each active delivery
+    setTimeout(() => {
+      shown.forEach((r, idx) => {
+        const mapId    = `amb-map-${idx}`;
+        const mapEl    = document.getElementById(mapId);
+        if (!mapEl || typeof L === "undefined") return;
+
+        const city      = (r.location || "").trim();
+        const bankLL    = CITY_COORDS_AMB[city] || [19.2307, 72.8567];
+        const destLL    = CITY_DEST_AMB[city]   || [19.2350, 72.8620];
+        const pct       = r.eta_remaining != null && r.eta_seconds
+          ? Math.max(0, Math.min(1, 1 - r.eta_remaining / r.eta_seconds))
+          : (r.status === "completed" ? 1 : 0);
+
+        // Current ambulance position interpolated from bank → dest
+        const curLat = bankLL[0] + (destLL[0] - bankLL[0]) * pct;
+        const curLng = bankLL[1] + (destLL[1] - bankLL[1]) * pct;
+
+        const midLat = (bankLL[0] + destLL[0]) / 2;
+        const midLng = (bankLL[1] + destLL[1]) / 2;
+
+        const map = L.map(mapId, { zoomControl: true, attributionControl: true })
+          .setView([midLat, midLng], 14);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 18
+        }).addTo(map);
+        _ambMaps[idx] = map;
+
+        // Blood bank marker
+        L.marker(bankLL, { icon: L.divIcon({
+          html: `<div style="background:#e11d48;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(225,29,72,.5)">🏥</div>`,
+          className:"", iconSize:[28,28], iconAnchor:[14,14]
+        })}).addTo(map).bindPopup("Blood Bank");
+
+        // Hospital marker
+        L.marker(destLL, { icon: L.divIcon({
+          html: `<div style="background:#16a34a;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(22,163,74,.5)">🏨</div>`,
+          className:"", iconSize:[28,28], iconAnchor:[14,14]
+        })}).addTo(map).bindPopup("Destination Hospital");
+
+        // Route line
+        L.polyline([bankLL, destLL], { color:"#e11d48", weight:3, dashArray:"8 6", opacity:0.7 }).addTo(map);
+
+        // Ambulance marker
+        const ambMarker = L.marker([curLat, curLng], {
+          icon: L.divIcon({
+            html: `<div style="font-size:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))">🚑</div>`,
+            className:"", iconSize:[28,28], iconAnchor:[14,14]
+          }),
+          zIndexOffset: 1000
+        }).addTo(map).bindPopup(`${r.eru_code} — In Transit`);
+
+        map.invalidateSize();
+
+        // Only animate if still in transit
+        if (r.status !== "in_transit") return;
+
+        let animPct = pct;
+        const step  = 0.003;   // ~0.3% per tick → smooth movement
+        const iv = setInterval(() => {
+          animPct = Math.min(animPct + step, 1);
+          const lat = bankLL[0] + (destLL[0] - bankLL[0]) * animPct;
+          const lng = bankLL[1] + (destLL[1] - bankLL[1]) * animPct;
+          ambMarker.setLatLng([lat, lng]);
+          map.panTo([lat, lng], { animate: true, duration: 0.4 });
+          if (animPct >= 1) clearInterval(iv);
+        }, 500);
+        _ambTimers[idx] = iv;
+      });
+    }, 200);
+  }
+  function openDonorMatchModal() {
+    openFeatModal("donor-match-modal");
+    // Pre-fill city from logged-in user
+    if (window.CURRENT_USER?.city) {
+      document.getElementById("dm-city").value = window.CURRENT_USER.city;
+    }
+    document.getElementById("dm-results").innerHTML =
+      '<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Select criteria above and click Match.</p>';
+  }
+
+  async function runDonorMatch() {
+    const blood  = document.getElementById("dm-blood").value;
+    const city   = document.getElementById("dm-city").value.trim();
+    const resBox = document.getElementById("dm-results");
+    resBox.innerHTML = '<div class="loading-state" style="padding:20px"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:auto"></div></div>';
+
+    try {
+      let url = "/api/donors/search?q=";
+      if (blood) url += encodeURIComponent(blood);
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      // Filter by city if provided, then sort by donations desc
+      const filtered = data
+        .filter(d => !city || d.city.toLowerCase().includes(city.toLowerCase()))
+        .sort((a, b) => b.donations - a.donations);
+
+      if (!filtered.length) {
+        resBox.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px">No donors found for those criteria.</p>';
+        return;
+      }
+
+      // Compatibility map — which donors can give to the searched group
+      const COMPAT = {
+        "A+":["A+","A-","O+","O-"], "A-":["A-","O-"],
+        "B+":["B+","B-","O+","O-"], "B-":["B-","O-"],
+        "AB+":["A+","A-","B+","B-","AB+","AB-","O+","O-"], "AB-":["A-","B-","AB-","O-"],
+        "O+":["O+","O-"], "O-":["O-"]
+      };
+      const compatible = blood ? COMPAT[blood] || [] : null;
+
+      const medalFor = (n) => n >= 10 ? "🥇" : n >= 5 ? "🥈" : n >= 1 ? "🥉" : "—";
+
+      resBox.innerHTML = `
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+          Found <strong>${filtered.length}</strong> donor(s) · ranked by donation count
+          ${blood ? `· compatible donors for <strong>${blood}</strong> highlighted` : ""}
+        </p>
+        ${filtered.map(d => {
+          const isCompat = compatible ? compatible.includes(d.blood_group) : true;
+          return `
+          <div class="dm-result-row" style="${!isCompat ? "opacity:0.45" : ""}">
+            <div class="dm-avatar">${d.name.charAt(0)}</div>
+            <div class="dm-info">
+              <strong>${d.name}</strong>
+              <span>${d.blood_group} · ${d.city} · ${d.donations} donation(s) ${medalFor(d.donations)}</span>
+            </div>
+            ${d.is_available
+              ? `<span class="dm-badge-pill">✓ Available</span>`
+              : `<span class="dm-badge-pill unavail">Unavailable</span>`}
+            ${isCompat && blood ? `<span style="font-size:11px;color:var(--success);font-weight:700;margin-left:6px">✓ Compatible</span>` : ""}
+          </div>`;
+        }).join("")}
+        <div style="text-align:right;margin-top:14px">
+          <a href="/inventory#donors" style="font-size:13px;color:var(--crimson);font-weight:600">
+            View full registry →
+          </a>
+        </div>`;
+    } catch {
+      resBox.innerHTML = '<p style="color:var(--crimson);text-align:center;padding:20px">Failed to load donors. Try again.</p>';
+    }
+  }
+
+  // ── 2. GPS TRACKING ──────────────────────────────────────
+  let gpsMap = null;
+  let gpsMarkers = [];
+
+  // Blood bank coordinates (mirrored from app.py CITY_COORDS)
+  const CITY_COORDS = {
+    "Virar":{"lat":19.4588,"lng":72.8110}, "Nalasopara":{"lat":19.4209,"lng":72.7996},
+    "Vasai":{"lat":19.3919,"lng":72.8397}, "Naigaon":{"lat":19.3636,"lng":72.8530},
+    "Bhayandar":{"lat":19.3000,"lng":72.8500}, "Mira Road":{"lat":19.2812,"lng":72.8726},
+    "Dahisar":{"lat":19.2490,"lng":72.8560}, "Borivali":{"lat":19.2307,"lng":72.8567},
+    "Kandivali":{"lat":19.2043,"lng":72.8490}, "Malad":{"lat":19.1863,"lng":72.8484}
+  };
+
+  async function openGpsModal() {
+    openFeatModal("gps-modal");
+    const listEl = document.getElementById("gps-delivery-list");
+    listEl.innerHTML = '<div class="loading-state" style="padding:10px"><div class="spinner" style="width:20px;height:20px;border-width:2px;margin:auto"></div></div>';
+
+    // Init map on first open
+    if (!gpsMap) {
+      gpsMap = L.map("gps-map").setView([19.35, 72.83], 11);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 18
+      }).addTo(gpsMap);
+    }
+
+    // Clear previous markers
+    gpsMarkers.forEach(m => gpsMap.removeLayer(m));
+    gpsMarkers = [];
+
+    try {
+      const res  = await fetch("/api/eru/list");
+      const data = await res.json();
+
+      if (!data.length) {
+        listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No delivery requests found.</p>';
+        return;
+      }
+
+      const inTransit  = data.filter(r => r.status === "in_transit");
+      const pending    = data.filter(r => r.status === "pending");
+      const completed  = data.filter(r => r.status === "completed");
+
+      listEl.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;font-size:13px">
+          <span style="background:#fff1f2;color:#e11d48;padding:4px 12px;border-radius:20px;font-weight:700">
+            🔴 Pending: ${pending.length}
+          </span>
+          <span style="background:var(--teal-pale);color:var(--teal-dark);padding:4px 12px;border-radius:20px;font-weight:700">
+            🏍️ In Transit: ${inTransit.length}
+          </span>
+          <span style="background:var(--success-pale);color:var(--success);padding:4px 12px;border-radius:20px;font-weight:700">
+            ✅ Completed: ${completed.length}
+          </span>
+        </div>
+        ${inTransit.length === 0 ? '<p style="color:var(--muted);font-size:12.5px">No active deliveries in transit right now. <a href="/rider" style="color:var(--crimson);font-weight:600">Start one from the ERU page →</a></p>' : ""}`;
+
+      const bounds = [];
+
+      data.forEach(r => {
+        const bankCoord = CITY_COORDS[r.location];
+        if (!bankCoord) return;
+
+        // Blood bank marker (red)
+        const bankIcon = L.divIcon({
+          html: `<div style="background:#e11d48;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏥</div>`,
+          className: "", iconSize: [28, 28], iconAnchor: [14, 14]
+        });
+        const bankMarker = L.marker([bankCoord.lat, bankCoord.lng], { icon: bankIcon })
+          .addTo(gpsMap)
+          .bindPopup(`<strong>Blood Bank</strong><br>${r.location}<br><span style="color:#e11d48">${r.blood_group} · ${r.units} unit(s)</span>`);
+        gpsMarkers.push(bankMarker);
+        bounds.push([bankCoord.lat, bankCoord.lng]);
+
+        // Destination marker (green) — offset slightly from bank
+        const destCoord = {
+          lat: bankCoord.lat + (Math.random() * 0.02 - 0.01),
+          lng: bankCoord.lng + (Math.random() * 0.02 - 0.01)
+        };
+        const destIcon = L.divIcon({
+          html: `<div style="background:#16a34a;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏨</div>`,
+          className: "", iconSize: [28, 28], iconAnchor: [14, 14]
+        });
+        const destMarker = L.marker([destCoord.lat, destCoord.lng], { icon: destIcon })
+          .addTo(gpsMap)
+          .bindPopup(`<strong>Destination</strong><br>${r.address || r.location}<br>Patient: ${r.patient_name || "—"}`);
+        gpsMarkers.push(destMarker);
+        bounds.push([destCoord.lat, destCoord.lng]);
+
+        // Route line
+        const line = L.polyline(
+          [[bankCoord.lat, bankCoord.lng], [destCoord.lat, destCoord.lng]],
+          { color: r.status === "in_transit" ? "#2563eb" : "#94a3b8", weight: 3, dashArray: r.status === "in_transit" ? null : "6,6" }
+        ).addTo(gpsMap);
+        gpsMarkers.push(line);
+
+        // Rider marker for in_transit — midpoint
+        if (r.status === "in_transit") {
+          const pct    = r.eta_remaining && r.eta_seconds
+            ? 1 - (r.eta_remaining / r.eta_seconds) : 0.5;
+          const midLat = bankCoord.lat + (destCoord.lat - bankCoord.lat) * Math.min(pct, 0.95);
+          const midLng = bankCoord.lng + (destCoord.lng - bankCoord.lng) * Math.min(pct, 0.95);
+          const riderIcon = L.divIcon({
+            html: `<div style="background:#2563eb;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(37,99,235,0.5)">🏍️</div>`,
+            className: "", iconSize: [32, 32], iconAnchor: [16, 16]
+          });
+          const riderM = L.marker([midLat, midLng], { icon: riderIcon })
+            .addTo(gpsMap)
+            .bindPopup(`<strong>${r.eru_code}</strong><br>In Transit → ${r.location}<br>${r.blood_group} · ${r.units} unit(s)<br>ETA: ~${r.eta_minutes || "?"} min · ${r.distance_km} km`);
+          gpsMarkers.push(riderM);
+          bounds.push([midLat, midLng]);
+        }
+      });
+
+      if (bounds.length) gpsMap.fitBounds(bounds, { padding: [30, 30] });
+      // Force map to re-render after modal display
+      setTimeout(() => gpsMap.invalidateSize(), 200);
+    } catch {
+      listEl.innerHTML = '<p style="color:var(--crimson);font-size:13px">Failed to load delivery data.</p>';
+    }
+  }
+
+  // ── 3. BLOOD COMPATIBILITY CHECKER ───────────────────────
+  const COMPAT_DATA = {
+    "O-":  { canDonateTo: ["O-","O+","A-","A+","B-","B+","AB-","AB+"], canReceiveFrom: ["O-"] },
+    "O+":  { canDonateTo: ["O+","A+","B+","AB+"],                       canReceiveFrom: ["O-","O+"] },
+    "A-":  { canDonateTo: ["A-","A+","AB-","AB+"],                      canReceiveFrom: ["O-","A-"] },
+    "A+":  { canDonateTo: ["A+","AB+"],                                  canReceiveFrom: ["O-","O+","A-","A+"] },
+    "B-":  { canDonateTo: ["B-","B+","AB-","AB+"],                      canReceiveFrom: ["O-","B-"] },
+    "B+":  { canDonateTo: ["B+","AB+"],                                  canReceiveFrom: ["O-","O+","B-","B+"] },
+    "AB-": { canDonateTo: ["AB-","AB+"],                                 canReceiveFrom: ["O-","A-","B-","AB-"] },
+    "AB+": { canDonateTo: ["AB+"],                                       canReceiveFrom: ["O-","O+","A-","A+","B-","B+","AB-","AB+"] },
+  };
+  const ALL_GROUPS = ["O-","O+","A-","A+","B-","B+","AB-","AB+"];
+
+  function openCompatModal() { openFeatModal("compat-modal"); }
+
+  function renderCompatTable(selected) {
+    const el = document.getElementById("compat-result");
+    if (!selected) { el.innerHTML = ""; return; }
+
+    const d = COMPAT_DATA[selected];
+    const badge = (bg, type) => {
+      const yes = type === "donate" ? d.canDonateTo.includes(bg) : d.canReceiveFrom.includes(bg);
+      return yes
+        ? `<span class="compat-can">✓ Yes</span>`
+        : `<span class="compat-no">✗ No</span>`;
+    };
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <p style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px">
+            <i class="fa fa-arrow-up" style="color:var(--crimson)"></i>
+            <strong style="color:var(--crimson)">${selected}</strong> can donate to:
+          </p>
+          <table class="compat-table">
+            <thead><tr><th>Blood Group</th><th>Can Receive?</th></tr></thead>
+            <tbody>
+              ${ALL_GROUPS.map(bg => `
+                <tr class="${d.canDonateTo.includes(bg) ? "highlight" : ""}">
+                  <td><span class="blood-badge">${bg}</span></td>
+                  <td>${badge(bg, "donate")}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <p style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px">
+            <i class="fa fa-arrow-down" style="color:var(--teal)"></i>
+            <strong style="color:var(--teal-dark)">${selected}</strong> can receive from:
+          </p>
+          <table class="compat-table">
+            <thead><tr><th>Blood Group</th><th>Can Donate?</th></tr></thead>
+            <tbody>
+              ${ALL_GROUPS.map(bg => `
+                <tr class="${d.canReceiveFrom.includes(bg) ? "highlight" : ""}">
+                  <td><span class="blood-badge">${bg}</span></td>
+                  <td>${badge(bg, "receive")}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:12px 16px;background:var(--teal-pale);border-radius:var(--radius);font-size:12.5px;color:var(--teal-dark)">
+        <i class="fa fa-info-circle"></i>
+        <strong>${selected}</strong> is compatible with
+        <strong>${d.canDonateTo.length}</strong> group(s) as a donor and can receive from
+        <strong>${d.canReceiveFrom.length}</strong> group(s).
+        ${selected === "O-" ? " · <strong>O- is the universal donor.</strong>" : ""}
+        ${selected === "AB+" ? " · <strong>AB+ is the universal recipient.</strong>" : ""}
+      </div>`;
+  }
+
+  // ── Session guard: redirect to login if not authenticated ──
+  // All dashboard data loading happens AFTER auth is confirmed
+  (async function guardSession() {
+    try {
+      const res  = await fetch("/api/me");
+      const data = await res.json();
+      if (!data.authenticated) {
+        window.location.replace("/signin");
+        return;
+      }
+      const u = data.user;
+      // Populate navbar
+      const nameEl = document.getElementById("nav-username");
+      if (nameEl) nameEl.textContent = u.full_name || u.username;
+      // Store user data globally for eligibility checks
+      window.CURRENT_USER = u;
+      // Pre-fill city filter if present
+      const cityFilter = document.getElementById("chart-city-filter");
+      if (cityFilter && u.city) cityFilter.value = u.city;
+
+      // ── Show personalised greeting ──
+      const displayName = u.first_name || u.full_name || u.username;
+      const greetEl     = document.getElementById("dashboard-greeting");
+      if (greetEl) {
+        if (u.is_first_login) {
+          greetEl.innerHTML = `<span style="font-size:22px">👋</span> Hi, <strong>${displayName}</strong>! Welcome to Smart Blood System.`;
+        } else {
+          greetEl.innerHTML = `<span style="font-size:22px">👋</span> Welcome back, <strong>${displayName}</strong>!`;
+        }
+        greetEl.style.display = "flex";
+      }
+
+      // ── Load all dashboard data only after auth is confirmed ──
+      loadDashboardStats();
+      loadRecentEmergencies();
+      loadInventoryGauges();
+      loadRecentOrders();
+      loadBloodDistributionChart(u.city || "");
+      checkPendingPayments();  // Check for user's pending payments
+    } catch {
+      window.location.replace("/signin");
+    }
+  })();
+
+  // ── Check for pending payments and show alert ──
+  async function checkPendingPayments() {
+    try {
+      const res = await fetch("/api/payment/my-pending");
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const alertEl = document.getElementById("pending-payment-alert");
+        const countEl = document.getElementById("pending-count");
+        if (alertEl && countEl) {
+          countEl.textContent = data.length;
+          alertEl.style.display = "flex";
+        }
+      }
+    } catch (err) {
+      console.log("Could not check pending payments:", err);
+    }
+  }
+
+  async function logoutUser() {
+    await fetch("/api/logout", { method: "POST" });
+    window.location.replace("/signin");
+  }
+</script>
+</body>
+</html>
